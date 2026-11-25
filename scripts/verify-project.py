@@ -86,6 +86,7 @@ def main():
             "project_rules": str(rules),
             "plugin_owned_paths_in_project": plugin_owned_paths(root),
             "approval_policy": str(approvals),
+            "artifact_read_rule_hint": f"Read(/{ARTIFACT}/**)",
             "qa_role": str(role),
             "coordinator_config_candidate": str(config) if config else None,
         }, sort_keys=True))
