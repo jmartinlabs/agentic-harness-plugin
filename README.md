@@ -16,7 +16,7 @@ Every moved file, its template source blob (commit `e9a46160753c5e61f7d3291da9e6
 | `templates/` | 8 document templates | Skills copy them into a project when needed. |
 | `agents/` | Claude Code agents `functional`, `implementation`, `infrastructure`, `qa-review` | Read the role from `${CLAUDE_PLUGIN_ROOT}/roles/<role>.md`; no hooks, `permissionMode` or MCP servers. Claude Code only. |
 | `hooks/hooks.json` | A Claude Code `SessionStart` hook that prints `skills/orchestrate/SKILL.md` (print budget 8704 bytes, enforced by a test) | Replaces the template's project `settings.json` hook. Claude Code only. |
-| `scripts/`, `bin/` | Tools `work-issue`, `agent-relay`, `check-delegation-route`, `report-agent-usage`, `auto-agent-usage` (ported from the baseline; the project root is the working directory or `--repo-root`, never the plugin directory), the integrity validator `validate-core` and the read-only `verify-project.py` | In Claude Code, `bin/` is on the Bash tool PATH while the plugin is enabled: `agentic-work-issue`, `agentic-relay`, `agentic-check-delegation-route`, `agentic-usage-report`, `agentic-usage-auto`. Elsewhere run `python3 scripts/<tool>` from the plugin root. |
+| `scripts/`, `bin/` | Tools `work-issue`, `agent-relay`, `check-delegation-route`, `report-agent-usage`, `auto-agent-usage` (ported from the baseline; the project root is the working directory or `--repo-root`, never the plugin directory), the integrity validator `validate-core` and the read-only `verify-project.py` | In Claude Code, `bin/` is on the Bash tool PATH while the plugin is enabled: `agentic-work-issue`, `agentic-relay`, `agentic-check-delegation-route`, `agentic-usage-report`, `agentic-usage-auto`. Run them from the project directory; elsewhere use `python3 <plugin root>/scripts/<tool>`. |
 | `tests/` | Plugin static tests, the ported tool suites (`tests/test-<tool>`, run as `python3 tests/test-work-issue`) and `fixtures/work-issue-project.json` | `scripts/validate-core --project DIR` validates `DIR/.agents/harnesses/*.json` (harness JSON v2). |
 
 Deliberate delta: `skills/orchestrate/SKILL.md` step 4 now says that the user configures the coordinator's model, providers and routes in the client, and that delegate defaults, profiles and external routes come from the coordinator's project file under coordinator configuration. This is the single wording fix required by issue 77; the #75/#76 semantics are unchanged.
@@ -40,6 +40,15 @@ Observed with an installed plugin (from the cache), Claude Code 2.1.330, `claude
 4. The rule is not portable as written: the install path depends on the Claude config directory, the marketplace name and the version, and no plugin-root variable was found or used in permission rules in these tests. The `~/...` form and a glob over marketplace names were not tested (the test layout could not authenticate with a temporary HOME).
 5. Not measured: interactive prompts (likely one per path, untested), a child agent without the rule, and a merge-gate observation with the policy readable.
 6. Consequence: onboarding must include an explicit step "allow Read on the plugin install directory" (the install path is printed by `claude plugin list --json` as `installPath`). A project that lacks the rule can silently lose access to the common methodology unless the model reports it, so the thin project `AGENTS.md` must say: if plugin files cannot be read, stop and ask the user to add the allow rule. This is addressed in the template-transformation increment. `scripts/verify-project.py` prints an informational `artifact_read_rule_hint` (`Read(//<artifact_root>/**)`) computed from the artifact root; it changes no behaviour or exit code.
+
+### Tools on PATH (observed)
+
+Observed with an installed plugin, Claude Code 2.1.330, `claude -p`, local synthetic, 4 sessions; the evidence is kept by the coordinator outside this repository.
+
+- `bin/agentic-*` are on the Bash tool PATH only while the plugin is enabled (exit 127 when it is not).
+- The portable rule `Bash(agentic-work-issue:*)` in `.claude/settings.local.json` let the command run without a prompt; without the rule it was denied. The same pattern for the other four shims was not tested.
+- A read-only `next --agent claude` against the owner's Project worked.
+- With no `--repo`, `--owner` or `--project` the tool refuses; it does not read them from `tracker.local.yaml`. This equals the baseline behaviour.
 
 ### Plugin and project paths
 
