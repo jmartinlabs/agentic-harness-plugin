@@ -2,9 +2,9 @@
 
 Every file below was moved from the Agentic Template at commit `e9a46160753c5e61f7d3291da9e6a0299f840aa0` (read as data). `Source blob` is `git rev-parse e9a4616:<source>`; `sha256` is of the destination bytes. Class precedence when several apply: deliberate-delta > path-reword > link-rewrite > copy. `copy` means byte-identical to the source.
 
-Deliberate deltas: `skills/orchestrate/SKILL.md` step 4 (one sentence about who configures what, required by issue 77, keeping the v2 semantics of #75/#76); the sentence that the command-line tool ships in the next increment (work-issue, relay); the banner that init-project, adopt-project and bootstrap still describe the pre-plugin flow.
+Deliberate deltas: `skills/orchestrate/SKILL.md` step 4 (one sentence about who configures what, required by issue 77, keeping the v2 semantics of #75/#76); the sentence in work-issue and relay that the command-line tool now ships with the plugin (replaces the next-increment banner); the banner that init-project, adopt-project and bootstrap still describe the pre-plugin flow.
 
-Not moved on purpose: `specs/methodology/acceptance-scenarios.md` (template-only), `scripts/*` tools and their tests (next increment), `docs/*`.
+Not moved on purpose: `specs/methodology/acceptance-scenarios.md` (template-only), `docs/*`, `scripts/review-read` and the OpenCode adapters (second-stage client), `.codex/hooks.json` (client wiring), `scripts/validate-template`, `scripts/test-validator`, `scripts/check-mermaid.mjs` and the evals (template-only). `scripts/validate-core`, `scripts/verify-project.py`, `bin/*` and the plugin tests are new, not moved.
 
 | Source | Source blob (git) | Destination | sha256 (destination) | Class | Notes |
 | --- | --- | --- | --- | --- | --- |
@@ -33,12 +33,12 @@ Not moved on purpose: `specs/methodology/acceptance-scenarios.md` (template-only
 | `.agents/skills/init-project/SKILL.md` | `d334a747bdd533b7b736086b60e74d2d23e54874` | `skills/init-project/SKILL.md` | `8c2960058308f1890e5f473eb3b8671420266002ec8273d8c41bb13eb3dd31ee` | deliberate-delta | deliberate-delta + link-rewrite: pre-plugin banner; document-ownership link; links |
 | `.agents/skills/orchestrate/SKILL.md` | `8bdc1ca888a281d15b81cc1694c080a629e8769f` | `skills/orchestrate/SKILL.md` | `289460dad5553ac766773230d9aa3480cc2315d994688d12a1d700be8460bc00` | deliberate-delta | step 4 wording fix (issue 77, keeps 76 semantics) |
 | `.agents/skills/relay/GITHUB_API.md` | `40cfb75333d4b32f7f46e9ed6c26f315adbfa4b4` | `skills/relay/GITHUB_API.md` | `78e22afd9c473d55e7a03fb81f804b471dbff03450a43937626ee2360261adca` | copy |  |
-| `.agents/skills/relay/SKILL.md` | `58fe3f1c548a445d0689e648d05c88d53bb93bde` | `skills/relay/SKILL.md` | `bac70b10fdaa3df99cfc4c26ef7deb0e3a9aa3dcff2fc12e65afa7ea5404e0c8` | deliberate-delta | tool-ships-in-next-increment sentence; links; do-not-invoke-scripts sentence |
+| `.agents/skills/relay/SKILL.md` | `58fe3f1c548a445d0689e648d05c88d53bb93bde` | `skills/relay/SKILL.md` | `7f4e32ac1f1c73f7b623ab64c56425bc71226f3f6de6a4e8e36d6d8ae853b93f` | deliberate-delta | tool-ships-with-the-plugin sentence replaces the next-increment banner; links |
 | `.agents/skills/roadmap/SKILL.md` | `6e938699ad54dc0cb1e525fb72ebf8ae68997e14` | `skills/roadmap/SKILL.md` | `1cb6c2cfe4b5636e4fda81a5c8db755a83b4348afdaba80b2953798f813c6346` | path-reword | Read line points to document-ownership.md |
 | `.agents/skills/spec/SKILL.md` | `910620681f99ae65bb27de198a7601d2b3d07910` | `skills/spec/SKILL.md` | `04de69ad8b0ae741de57742496a3c7a8c45e0389c49332ed4776eeac4e786fe1` | path-reword | Read line points to document-ownership.md; links |
 | `.agents/skills/task/SKILL.md` | `aaced45fe775018d482edcd5903c06489beb981b` | `skills/task/SKILL.md` | `c656fee3a5fc6666cb7e404cf85582238b16682fc8aee9f878b2f15212c78511` | link-rewrite | relative links only |
 | `.agents/skills/tweak/SKILL.md` | `bb470e22d6004366ee54c7e8c1e94db6b24b7781` | `skills/tweak/SKILL.md` | `029b1d6bc88f8e00031c3bfbfa126ead30f463110db34424cb3ca6c161f61c86` | link-rewrite | relative links only |
-| `.agents/skills/work-issue/SKILL.md` | `8849b4691d903d8ae2726f07c787a5faf937b6b5` | `skills/work-issue/SKILL.md` | `1dcb7abdbf779ffddff40020e39c2260ab19d808b41757f4c15c05105a0cc238` | deliberate-delta | tool-ships-in-next-increment sentence; links; do-not-invoke-scripts sentence |
+| `.agents/skills/work-issue/SKILL.md` | `8849b4691d903d8ae2726f07c787a5faf937b6b5` | `skills/work-issue/SKILL.md` | `567c0c6512d2288a8260dccdfe6acfee06edd4fd56c9dfd87984b8ac6ec1729b` | deliberate-delta | tool-ships-with-the-plugin sentence replaces the next-increment banner; links |
 | `templates/agent-work-packet.md` | `8d6a09208da01b5467cfe7e5404a157f45d2fa84` | `templates/agent-work-packet.md` | `fa30885220462be5f619660af9b8f9718e819916af87f088e65f6746db0b8181` | link-rewrite | relative links only |
 | `templates/brainstorming.md` | `58c580dfd5816e9e38f0b65c2adb277fbe9b4896` | `templates/brainstorming.md` | `f63d98662ddc133d4c7669e0ff7117c6a2ea37d9a914a594c5d7cc6fa9f8c9a7` | copy |  |
 | `templates/epic-board.md` | `af0d4013b78e8298c186dafb02a5647bf4a977c4` | `templates/epic-board.md` | `301039b0903bc0a3483e8d9749cd3f8ff8ec78c97bce7d6e75a581566b8f84a4` | copy |  |
@@ -47,3 +47,14 @@ Not moved on purpose: `specs/methodology/acceptance-scenarios.md` (template-only
 | `templates/roadmap.md` | `cb6d3b2031e3e7ed17a8a9e6dbb0e7cba5a49c94` | `templates/roadmap.md` | `6e02140e4193c992a96e9180838edc034982f90ad66d93ff57b558717046b00b` | copy |  |
 | `templates/specification.md` | `dcfc83c4e5feac3402165ba2774e25e85fcecfb5` | `templates/specification.md` | `c5863038125063c7ef7a29ed2d82c88c09e19c94cb1bab6182feaa1b4ae5cc18` | copy |  |
 | `templates/testplan.md` | `716edd2677dd3a5d6b3053e476d4c9ff74e5f115` | `templates/testplan.md` | `fb360bb3d64f3e79fcdb70cb5900c13d663576132a31aa0f4abe0dda212599a6` | copy |  |
+| `scripts/agent-relay` | `2795ac20980e4d2e643e6d13f220d9298982dbbd` | `scripts/agent-relay` | `a6f5cc8a1492ee095cc43e2401af0e8329f98cfd7e8ac99b61f7850aacbfccbe` | copy |  |
+| `scripts/auto-agent-usage` | `a5708697da74dc146d28f5ae6d898726f9a744b0` | `scripts/auto-agent-usage` | `348fcb743e1ae9a93741e1fbf033c0d89aad864c53242ae2eefcfe4e6b21f2a7` | copy |  |
+| `scripts/check-delegation-route` | `9c28c27fd39fc1dd3618de9256f9efbf2c84aaa8` | `scripts/check-delegation-route` | `a38e2dfdeade729926ff67798565b90f95f872f3d536a6af68060343d0314048` | copy |  |
+| `scripts/report-agent-usage` | `27a40515352f4b5fa840fc00372e61f500276f24` | `scripts/report-agent-usage` | `b6326323799a29b011f2cac904713d2ced676b79cc387e6a546a88a93adb0a9f` | copy |  |
+| `scripts/work-issue` | `0e558cd33ea9e99d91f62a65a3e6f7a2463ec157` | `scripts/work-issue` | `e95a3f3462f566d242cd74bef3d1f43ce6a3ac0fceb6c9abfeec12e03730b99c` | path-reword | project root from cwd/git top level or --repo-root, not the tool directory (adds project_root, repo_root_option; context --repo-root defaults to it) |
+| `scripts/test-agent-relay` | `e22608674682af539b79a72086537e43271ac627` | `tests/test-agent-relay` | `10f820c8b5a604411e8f3f968cd79a92df55be0035c545a3b388f16329fa7deb` | copy |  |
+| `scripts/test-delegation-route` | `dc5a27e9af8bc383204dc8558d78ff014487cc70` | `tests/test-delegation-route` | `6ce73e492ffe07381f0e48517f53bee6bd6a3857af302bff3dbd30c99e76b93a` | copy |  |
+| `scripts/test-agent-usage` | `18e771cca0aec9b3a93368e1a02df7531996b014` | `tests/test-agent-usage` | `22952934cd9460a36fa2ad8131b8ba7bdfe1d24bca1934cdaac28b348e768b85` | copy |  |
+| `scripts/test-work-issue` | `e09049fad42e41690218baf8cb5304d973691daf` | `tests/test-work-issue` | `2e47b5e77b61a0253a98be811bf62c36fb10293e79c95d65ee95043449ea6e47` | deliberate-delta | paths to the plugin layout; documentation-wiring test reads methodology/document-ownership.md instead of AGENTS.md and skills/ instead of .claude/skills |
+| `scripts/test-auto-agent-usage` | `4397f1496d45f57f69b6d3c18b3a0ce60270f67f` | `tests/test-auto-agent-usage` | `56366b94b4e33dbcb5bd41c8f823d5b6bc6ac53c7ab9054e989108a2a58ce2d3` | path-reword | hook-configuration test skips until Codex hook wiring ships |
+| `scripts/fixtures/work-issue-project.json` | `13698afd61fdad55c91e77ebeb9c1b09cac96afc` | `tests/fixtures/work-issue-project.json` | `fae9ce996551c3768ae8d3e3e48af0dbf77b90fc347bc340d7361cbb1be1304a` | copy |  |

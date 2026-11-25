@@ -5,7 +5,7 @@ description: Exchange substantive messages between two agents through one Git br
 
 # relay
 
-The command-line tool for this skill ships in the next increment; until then follow the manual protocol in [the issue workflow](../../methodology/issue-workflow.md). Do not invoke scripts/agent-relay from this version: they are not packaged yet.
+The command-line tool ships with this plugin: from the plugin root run scripts/agent-relay (in Claude Code it is on PATH as `agentic-relay`).
 
 Optional, user-triggered transport for a two-participant conversation. It is not a work
 queue, a controller, an approval channel or a second source of truth. The canonical packet

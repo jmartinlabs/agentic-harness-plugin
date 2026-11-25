@@ -5,7 +5,7 @@ description: Take authorized work from Issues and an optional GitHub Project, ro
 
 # work-issue
 
-The command-line tool for this skill ships in the next increment; until then follow the manual protocol in [the issue workflow](../../methodology/issue-workflow.md). Do not invoke scripts/work-issue from this version: they are not packaged yet.
+The command-line tool ships with this plugin: from the plugin root run scripts/work-issue (in Claude Code it is on PATH as `agentic-work-issue`).
 
 Entry point for work that already exists as Issues, optionally tracked in a GitHub Project. Only the
 orchestrator runs it: a delegated role never takes Issues. It reads, routes, reserves and reports; it

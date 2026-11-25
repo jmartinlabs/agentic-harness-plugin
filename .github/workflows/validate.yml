@@ -26,6 +26,18 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Run regression tests and validate plugin and marketplace manifests
         run: python3 -m unittest discover -s tests -v
+      - name: Validate plugin integrity
+        run: python3 scripts/validate-core
+      - name: Test work-issue
+        run: python3 tests/test-work-issue
+      - name: Test agent-relay
+        run: python3 tests/test-agent-relay
+      - name: Test delegation-route
+        run: python3 tests/test-delegation-route
+      - name: Test agent-usage
+        run: python3 tests/test-agent-usage
+      - name: Test auto-agent-usage
+        run: python3 tests/test-auto-agent-usage
 
   claude-validate:
     runs-on: ubuntu-latest
