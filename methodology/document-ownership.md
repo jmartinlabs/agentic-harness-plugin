@@ -16,6 +16,7 @@ This plugin ships the methodology; a project created from it starts uninitialize
 | `specs/guidelines/ui.md` | Applicable interface conventions or explicit not-applicable reason | init-project / dev |
 | `specs/guidelines/quality.md` | Commands, checks, review and Definition of Done | bootstrap / dev |
 | `specs/guidelines/security.md` | Threats, safeguards and authorization boundaries | init-project / dev |
+| `specs/project-rules.md` | Local gates, restrictions and verification rules; read by the skills before every gate | project scaffold, or init-project / adopt-project |
 | `specs/roadmap.md` | Approved product outcomes and epic scope | roadmap |
 | `specs/epic-board.md` | Optional multi-epic queue, blockers, dependencies and evidence links when no Project owns status; never canonical approvals | orchestrate only |
 | `specs/NN-slug-brainstorming.md` | Append-only questions and confirmed answers | spec |

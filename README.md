@@ -3,9 +3,9 @@
 ## Quick start
 
 1. Create the project repository from the template (GitHub "Use this template").
-2. Add the marketplace pinned to a reviewed tag or commit SHA: `claude plugin marketplace add jmartinlabs/agentic-harness-plugin#<tag-or-sha>`. The pin is the project's reference revision; no other lock file exists.
-3. Install the plugin: `claude plugin install agentic@agentic-harness --scope project`. The tested flows used `--scope local`; project scope is untested.
-4. Allow the plugin's files and tools. Either approve the permission prompts with "don't ask again" (interactive; untested), or run `agentic-verify-project --print-rules` and paste its JSON into the project's untracked `.claude/settings.local.json` (verified in `-p`; see "Permissions for plugin files").
+2. Make the plugin available. A project created from the template scaffold already carries `enabledPlugins` and the marketplace pin in `.claude/settings.json`: run only `claude plugin install agentic@agentic-harness --scope local` (or `--scope project`), with no second marketplace add. A project not created from the scaffold (an existing project, or `/agentic:adopt-project`) adds the marketplace first, pinned to a reviewed tag or commit SHA: `claude plugin marketplace add jmartinlabs/agentic-harness-plugin#<tag-or-sha>`. The pin is the project's reference revision; no other lock file exists. The tested flows used `--scope local`; project scope is untested.
+3. Trust the project: open it interactively once and accept the trust dialog, so the project-shared `.claude/settings.json` rules apply. In `-p` the project-shared rules are ignored (measured); after the trust dialog they are expected to apply, which is untested.
+4. Allow the plugin's files and tools. Either approve the permission prompts with "don't ask again" (interactive; untested), or run `agentic-verify-project --print-rules` and paste its JSON into the project's untracked `.claude/settings.local.json`. Verified (local, `-p`): the Read rule and `Bash(agentic-work-issue:*)`; the rules for the other five shims and pasting the printed JSON itself are untested. Re-run `agentic-verify-project --print-rules` after any plugin update: the Read rule contains the install path of that version. See "Permissions for plugin files".
 5. Run `/agentic:verify-project` to check readiness.
 6. Run `/agentic:init-project` for a new project, or `/agentic:adopt-project` for an existing one.
 
