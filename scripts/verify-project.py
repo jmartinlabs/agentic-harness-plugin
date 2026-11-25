@@ -18,7 +18,7 @@ SHIM_RULES = ("agentic-verify-project", "agentic-work-issue", "agentic-relay",
 
 
 def permission_rules():
-    """Allow rules for user-level Claude settings. Printed, never written."""
+    """Allow rules for the project's untracked .claude/settings.local.json. Printed, never written."""
     allow = [f"Read(/{ARTIFACT}/**)"] + [f"Bash({name}:*)" for name in SHIM_RULES]
     return {"permissions": {"allow": allow}}
 
