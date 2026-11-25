@@ -1,7 +1,7 @@
 # Issue template
 
 Copy the blocks that apply. Keep the Issue self-sufficient: another agent must be able to act
-on it without reading a chat. The protocol is [the issue workflow](../specs/methodology/issue-workflow.md);
+on it without reading a chat. The protocol is [the issue workflow](../methodology/issue-workflow.md);
 a trivial correction needs no SPEC and no formal epic.
 
 ## Objective

@@ -6,7 +6,7 @@ description: Build and verify the smallest end-to-end walking skeleton from appr
 # bootstrap
 
 ## Inputs
-Read `AGENTS.md`, `specs/README.md`, existing state and applicable guidelines before acting.
+Read `AGENTS.md`, [document ownership](../../methodology/document-ownership.md), existing state and applicable guidelines before acting.
 ## Outputs
 Minimal working infrastructure, basic automated tests, reproducible commands, guideline
 updates, evidence in setup progress and a working local commit.
@@ -20,7 +20,7 @@ updates, evidence in setup progress and a working local commit.
    Avoid unrelated business functionality and unnecessary packages.
 4. Add basic automated tests that would fail if the essential flow broke. Run actual
    build/type checks required by the chosen tooling, then tests; record commands/results.
-   Implement the [change-aware CI contract](../../../specs/methodology/ci-policy.md):
+   Implement the [change-aware CI contract](../../methodology/ci-policy.md):
    a shared conservative `docs`/`full` classifier, mandatory baseline controls,
    local-full delivery coverage, fast-CI and independent critical-CI profiles,
    and behavioral harness/workflow regression fixtures.

@@ -3,7 +3,7 @@
 Load this document only when work is delegated to a client other than the one coordinating (Codex,
 OpenCode). It completes [dynamic agent management](dynamic-agents.md), which keeps every shared gate;
 nothing here relaxes them. The user talks only to the orchestrator: nobody copies packets or replies by
-hand. The optional [relay](../../.agents/skills/relay/SKILL.md) is transport only, never approval or state.
+hand. The optional [relay](../skills/relay/SKILL.md) is transport only, never approval or state.
 
 ## Configuration
 
@@ -34,7 +34,7 @@ edits it.
 2. Check `enabled` and `tasks`, the real authorization, the verified procedure, and that the client is
    installed and authenticated. If the client has no operational transport or does not answer within the
    time limit, report the limitation and stop that delegation; there is no manual alternative.
-3. Build the [work packet](../../templates/agent-work-packet.md): scope, files, prohibitions, return. A
+3. Build the [work packet](../templates/agent-work-packet.md): scope, files, prohibitions, return. A
    brief is an instruction, not a technical barrier; use the client's native sandbox or permissions when
    they exist.
 4. Launch with a log (see Observability) and keep the real exit code.

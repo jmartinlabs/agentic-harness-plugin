@@ -8,7 +8,7 @@ description: Take authorized work from Issues and an optional GitHub Project, ro
 Entry point for work that already exists as Issues, optionally tracked in a GitHub Project. Only the
 orchestrator runs it: a delegated role never takes Issues. It reads, routes, reserves and reports; it
 never approves, merges, deploys or closes. The contract (statuses, owners, manual protocol, routing,
-receipts, PR linkage) is [the issue workflow](../../../specs/methodology/issue-workflow.md); coordination,
+receipts, PR linkage) is [the issue workflow](../../methodology/issue-workflow.md); coordination,
 ownership and QA stay in [orchestrate](../orchestrate/SKILL.md).
 
 ## Skill and tool

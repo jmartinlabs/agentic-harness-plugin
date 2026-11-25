@@ -6,7 +6,7 @@ description: Specify a roadmap epic by number or a new feature by name through r
 # spec
 
 ## Inputs
-Read `AGENTS.md`, `specs/README.md`, existing state and applicable guidelines before acting.
+Read `AGENTS.md`, [document ownership](../../methodology/document-ownership.md), existing state and applicable guidelines before acting.
 Functional delegates also follow [the functional role](../../roles/functional.md) and their work packet.
 ## Outputs
 `specs/{nr}-{slug}-brainstorming.md` and `specs/{nr}-{slug}-specification.md`,
@@ -42,9 +42,9 @@ with a two-digit number, approved decisions and a local documentation commit.
    to the coordinator, which owns the shared current-state surface (`Project` `Status` when
    configured, otherwise the epic board).
    When a tracker is configured, also generate the executable Issues derived from the approved
-   SPEC in `Backlog`, one per deliverable, shaped by the [Issue template](../../../templates/issue.md)
+   SPEC in `Backlog`, one per deliverable, shaped by the [Issue template](../../templates/issue.md)
    and linked to the SPEC: deduplicate first, never mark them `Ready` and never authorize their
-   execution. Follow the [issue workflow](../../../specs/methodology/issue-workflow.md).
+   execution. Follow the [issue workflow](../../methodology/issue-workflow.md).
 ## Stop conditions
 Pause on unanswered questions, unapproved wireframes/specification or important conflicts.
 Preserve history and next action for resumption. Do not implement the feature. After the
