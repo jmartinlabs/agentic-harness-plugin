@@ -72,7 +72,7 @@ Delegation sizing follows [dynamic agent management](dynamic-agents.md): one exe
 Start with a falsifiable hypothesis, one discriminating probe and expected evidence. After two comparable attempts without new findings, keep logs and state, and escalate for a new hypothesis or scope decision. This never waives QA, regression checks or urgent safety containment.
 
 ## Work packets
-Each delegate gets a [work packet](../../templates/agent-work-packet.md) and a [role contract](../../.agents/roles/README.md). Specialists never promote a draft to approved, merge a PR or update the board.
+Each delegate gets a [work packet](../templates/agent-work-packet.md) and a [role contract](../roles/README.md). Specialists never promote a draft to approved, merge a PR or update the board.
 Mixed-client workers, preflight, advance escalation notices, fresh context and resource
 isolation follow [dynamic agent management](dynamic-agents.md); no parallel scheduler.
 
@@ -87,7 +87,7 @@ Never infer approval from a checked option, silence, an earlier related approval
 - Once E1.6 is explicitly approved, the coordinator starts dev for E1.6 within that scope; E1.7 drafting may continue if write isolation is safe.
 
 This is not a real status report; always inspect the actual repository before filling the board.
-The [Spanish visual guide](../../docs/GUIA_VISUAL_ORQUESTACION.md) has eight Mermaid diagrams of this flow.
+The Spanish visual guide (`docs/GUIA_VISUAL_ORQUESTACION.md` in the template, not part of the plugin) has eight Mermaid diagrams of this flow.
 
 ## Resume and verification
 Resume from AGENTS.md and the last verified checkpoint; reconcile Git, approval and test changes; load the full board, spec or roadmap only when needed. Report passed, failed, blocked and unrun checks accurately. Template CI does not prove live agent behavior.

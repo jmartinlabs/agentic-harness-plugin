@@ -113,7 +113,7 @@ board.
    to that agent's queue.
 2. **Verify.** With a Project, require the specific `Ready` status; without one, require the
    human authorization recorded in the Issue. In both cases require sufficient scope, ownership
-   and no open dependency. A dependency number resolves only in this repository; a qualified
+   and no open dependency. A dependency number resolves only in the current project repository; a qualified
    `owner/repo#N` reference is not supported and fails closed as unverifiable. An agent never
    creates permission by moving the Status itself.
 3. **Recover context.** Read the whole history with pagination, the linked sources and the

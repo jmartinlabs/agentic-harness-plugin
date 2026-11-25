@@ -2,21 +2,21 @@
 
 How orchestrate delegates: roles, work packets, ownership, review and the one standing client
 authorization. When to delegate, the execution mode, models and provider limits are in the
-[orchestrate core](../../.agents/skills/orchestrate/SKILL.md#procedure) (steps 3–4); epic scheduling is
+[orchestrate core](../skills/orchestrate/SKILL.md#procedure) (steps 3–4); epic scheduling is
 in [epic orchestration](epic-orchestration.md) and the flow is illustrated in the
-[visual operating guide](../../docs/GUIA_VISUAL_ORQUESTACION.md).
+visual operating guide (`docs/GUIA_VISUAL_ORQUESTACION.md` in the template, not part of the plugin).
 
 ## Roles are profiles, not permanent workers
 
-Reusable profiles: [Functional](../../.agents/roles/functional.md), [Implementation](../../.agents/roles/implementation.md),
-[QA/Review](../../.agents/roles/qa-review.md) and [Infrastructure/DevOps](../../.agents/roles/infrastructure.md).
+Reusable profiles: [Functional](../roles/functional.md), [Implementation](../roles/implementation.md),
+[QA/Review](../roles/qa-review.md) and [Infrastructure/DevOps](../roles/infrastructure.md).
 They shape behavior; they do not register running agents or cap delegation. The coordinator may run
 several tasks with the same profile or write a narrow temporary role. It is the only scheduler and the
 only writer of the shared board; a delegate acts on its packet and nothing else.
 
 ## Work packets
 
-Delegate with a compact [work packet](../../templates/agent-work-packet.md): objective and done
+Delegate with a compact [work packet](../templates/agent-work-packet.md): objective and done
 criteria, authorization, owned files and isolation, prohibited actions, stop conditions, the
 **applicable rules** (the few policy rules this task needs, one line each with a source link) and the
 return schema. Delegates read their role and the packet, not every policy; one that finds a needed
@@ -124,7 +124,7 @@ approval.
 A **Claude Code coordinator only** may use the local Codex CLI as an additional **read-only** reviewer
 when justified (a financial, security, persistence or data-integrity risk, or an explicit owner request)
 without asking each time, while `external.codex.tasks.review` is `automatic` in
-[`.agents/harnesses/claude.json`](../../.agents/harnesses/claude.json). It is the only automatic client
+`.agents/harnesses/claude.json`. It is the only automatic client
 launch; every other external launch needs an explicit owner request. It is neither independent QA nor
 an approval. Procedure: [external delegation](dynamic-agents-external-clients.md#codex-cli).
 
@@ -142,5 +142,5 @@ This repository holds **instructions and templates**: no universal agent registr
 or job queue. Check what the actual client supports for delegation, non-blocking execution and isolation
 before each use; nothing keeps running after the session or client closes. The optional OpenCode
 adapters (`review`, `functional`, `implementation`, `infrastructure`, see the
-[OpenCode adapter](../../docs/OPENCODE_ADAPTER.md)) are thin client adapters over these roles, not
+OpenCode adapter (`docs/OPENCODE_ADAPTER.md` in the template, not part of the plugin)) are thin client adapters over these roles, not
 launchers, schedulers or controllers.

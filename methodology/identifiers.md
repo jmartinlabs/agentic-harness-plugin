@@ -6,7 +6,7 @@ This is additive: it does not rename existing documents, branches, PRs or histor
 ## 1. Functional identifier
 
 Each project declares its own **functional identifier** grammar in `AGENTS.md` or in its
-`specs/README.md`, once, before the first work packet. The identifier:
+[document ownership](document-ownership.md), once, before the first work packet. The identifier:
 
 - names a **capability or initiative**, never a phase, agent or document;
 - is **stable and unique** for its whole life; never reused or renumbered;

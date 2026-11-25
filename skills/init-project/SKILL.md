@@ -6,7 +6,7 @@ description: Start or resume interactive project initialization, from identity t
 # init-project
 
 ## Inputs
-Read `AGENTS.md`, `specs/README.md`, existing state and applicable guidelines before acting.
+Read `AGENTS.md`, [document ownership](../../methodology/document-ownership.md), existing state and applicable guidelines before acting.
 ## Outputs
 `specs/project.md`, canonical guidelines, `specs/setup-progress.md`, a verified bootstrap
 and an approved `specs/roadmap.md`. Never generate an application inside the template itself.
@@ -14,7 +14,7 @@ and an approved `specs/roadmap.md`. Never generate an application inside the tem
 - Inspect existing code, references and documents first.
 - In the template itself: help create or open an independent derived repository (publishing needs authorization).
 - Already in a derived project: do not clone again. Prefer the current checkout; use the
-  [local worktree policy](../../../specs/methodology/approvals.md#local-worktrees) if isolation helps.
+  [local worktree policy](../../methodology/approvals.md#local-worktrees) if isolation helps.
 
 ### Resume protocol
 - If `specs/setup-progress.md` exists, read it and follow its next action. Check that linked
@@ -70,11 +70,11 @@ and invalid cases; do not invent agent hooks.
 Follow the roadmap Skill. Get approval and commit the initial roadmap.
 When the user asked to initialize the project and a tracker is available, also leave the
 planning Issues each SPEC needs in `Backlog`, linked to their epic and shaped by the
-[Issue template](../../../templates/issue.md); once a SPEC is approved, generate its executable
+[Issue template](../../templates/issue.md); once a SPEC is approved, generate its executable
 Issues the same way without waiting for a new request. Deduplicate first, never mark them
 `Ready` because they were generated, and never invent access: without a repository or
 permission, deliver the proposal and the blocker. Operational state stays in the tracker per the
-[issue workflow](../../../specs/methodology/issue-workflow.md).
+[issue workflow](../../methodology/issue-workflow.md).
 ### Stage 7 — Handoff
 Summarize decisions (by link), technologies, architecture, verified bootstrap, documentation,
 roadmap and open questions. Explain the next steps: spec 01, then dev 01. Mark complete only when

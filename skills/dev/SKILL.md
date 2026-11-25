@@ -6,7 +6,7 @@ description: Implement an approved specification in verified increments with pro
 # dev
 
 ## Inputs
-Read `AGENTS.md`, `specs/README.md`, existing state and applicable guidelines before acting.
+Read `AGENTS.md`, [document ownership](../../methodology/document-ownership.md), existing state and applicable guidelines before acting.
 ## Outputs
 Working increments, `specs/{nr}-{slug}-progress.md`, `specs/{nr}-{slug}-testplan.md`,
 verified acceptance evidence, relevant documentation updates and local commits.
@@ -19,14 +19,14 @@ verified acceptance evidence, relevant documentation updates and local commits.
    evidence location, local/CI platform, owner and negative/integration cases before code.
    Preserve previous evidence with run dates and label stale results.
 3. Preflight the affected environment and assign permission-sensitive operation owners.
-   Follow [coordination](../../../specs/methodology/dynamic-agents.md) for advance
+   Follow [coordination](../../methodology/dynamic-agents.md) for advance
    escalation notices, external workers and shared test resources; never bypass approval.
    Implement small working increments. Maintain task state, relevant errors and next
    action. Run relevant automated tests and required build/type/lint checks. Inspect
    errors and regressions, correct defects and repeat affected checks. Complete required
    checks on each stable candidate; reuse evidence only for unchanged inputs/environment,
    recording reasons for repeats. Incompatible local runs never replace CI gates.
-   Follow the [CI contract](../../../specs/methodology/ci-policy.md) for local-full,
+   Follow the [CI contract](../../methodology/ci-policy.md) for local-full,
    fast-CI and critical-CI profiles. Independent QA verifies candidate/base/environment
    and reachable raw logs, not a PASS declared by the author; stale evidence blocks integration.
 4. Verify actual functionality, not just compilation or a process/port. For non-visual
@@ -48,7 +48,7 @@ verified acceptance evidence, relevant documentation updates and local commits.
    and next action; supersede stale current labels without deleting history.
 ## Stop conditions
 Never deploy to production or perform destructive operations without explicit permission.
-Branch/PR publication follows [approvals](../../../specs/methodology/approvals.md#branch-and-pr-publication);
+Branch/PR publication follows [approvals](../../methodology/approvals.md#branch-and-pr-publication);
 respect local-only instructions. Stop on important conflicts or missing required authorization. Record blockers;
 failed, skipped and unrun checks remain open. Do not finish as complete while acceptance
 checks fail. Preserve enough progress to resume in another session.
