@@ -5,7 +5,7 @@ description: Take authorized work from Issues and an optional GitHub Project, ro
 
 # work-issue
 
-The command-line tool ships with this plugin: from the plugin root run scripts/work-issue (in Claude Code it is on PATH as `agentic-work-issue`).
+The command-line tool ships with this plugin: run it from the PROJECT directory, by its `agentic-work-issue` shim in Claude Code (on PATH while the plugin is enabled) or by `python3 <plugin root>/scripts/work-issue` elsewhere; repository, owner and Project are always passed explicitly (`--repo`, `--owner`, `--project`); `.agents/tracker.local.yaml` only supplies the agents catalogue.
 
 Entry point for work that already exists as Issues, optionally tracked in a GitHub Project. Only the
 orchestrator runs it: a delegated role never takes Issues. It reads, routes, reserves and reports; it

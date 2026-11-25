@@ -225,5 +225,32 @@ class PluginCase(unittest.TestCase):
         self.assertRule(root, "shims")
 
 
+class IndependentCoverage(PluginCase):
+    """Direct checks of the shared helpers' effects, without the test_plugin helpers."""
+
+    def test_link_checker_catches_a_broken_relative_link_in_a_copy(self):
+        root = self.fixture()
+        (root / "roles" / "README.md").write_text("[gone](missing-file.md)\n", encoding="utf-8")
+        errors = CORE["check_links"](root.resolve())
+        self.assertTrue(any("missing-file.md" in e for e in errors), errors)
+        self.assertEqual(CORE["check_links"](ROOT), [])
+
+    def test_provenance_mismatch_is_detected_after_modifying_a_copied_file(self):
+        root = self.fixture()
+        self.assertEqual(CORE["check_provenance"](root.resolve()), [])
+        path = root / "methodology" / "approvals.md"
+        path.write_bytes(path.read_bytes() + b"\nextra\n")
+        errors = CORE["check_provenance"](root.resolve())
+        self.assertTrue(any("methodology/approvals.md" in e and "sha256" in e for e in errors), errors)
+
+    def test_hook_budget_exceeded_is_detected(self):
+        root = self.fixture()
+        self.assertEqual(CORE["check_hook"](root.resolve()), [])
+        with (root / "skills" / "orchestrate" / "SKILL.md").open("a") as stream:
+            stream.write("y" * (CORE["HOOK_PRINT_BUDGET"] + 1))
+        errors = CORE["check_hook"](root.resolve())
+        self.assertTrue(any("budget" in e for e in errors), errors)
+
+
 if __name__ == "__main__":
     unittest.main()
