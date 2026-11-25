@@ -210,6 +210,23 @@ class PilotBoundaryTests(unittest.TestCase):
         self.assertEqual(json.loads(result.stdout)["plugin_owned_paths_in_project"],
                          [".claude/agents", ".codex", "specs/methodology", "templates"])
 
+    def test_print_rules_prints_json_and_writes_nothing(self):
+        project = self.projects / "a"
+        before = sorted(self.sandbox.rglob("*"))
+        for arguments in (("--print-rules",), ("--print-rules", "--project", str(project))):
+            result = self.invoke(self.sandbox, *arguments)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stderr, "")
+            rules = json.loads(result.stdout)
+            self.assertEqual(list(rules), ["permissions"])
+            root = (self.bundle).resolve()
+            self.assertEqual(rules["permissions"]["allow"], [
+                f"Read(/{root}/**)", "Bash(agentic-verify-project:*)", "Bash(agentic-work-issue:*)",
+                "Bash(agentic-relay:*)", "Bash(agentic-check-delegation-route:*)",
+                "Bash(agentic-usage-report:*)", "Bash(agentic-usage-auto:*)"])
+        self.assertEqual(before, sorted(self.sandbox.rglob("*")))
+        self.assertFalse((project / ".claude").exists())
+
     def test_artifact_read_rule_hint_is_informational(self):
         result = self.invoke(self.projects / "a")
         self.assertEqual(result.returncode, 0, result.stderr)
