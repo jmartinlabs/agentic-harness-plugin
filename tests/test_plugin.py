@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 import re
+import runpy
 import subprocess
 import unittest
 from collections import Counter
@@ -20,53 +21,15 @@ def plugin_markdown():
             if path.relative_to(ROOT).parts[0] not in (".git", "tests")]
 
 
-def prose_lines(text):
-    """Lines outside fenced code, with inline code spans blanked."""
-    fenced = False
-    for number, line in enumerate(text.split("\n"), 1):
-        if re.match(r"^\s*(```|~~~)", line):
-            fenced = not fenced
-            continue
-        if not fenced:
-            yield number, re.sub(r"`[^`]*`", "", line)
-
-
-def slugs(path):
-    seen = Counter()
-    result = set()
-    for _, line in prose_lines(path.read_text(encoding="utf-8")):
-        match = re.match(r"^#{1,6}\s+(.*?)\s*#*\s*$", line)
-        if not match:
-            continue
-        raw = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", match.group(1))
-        slug = re.sub(r"[^\w\- ]", "", raw.lower()).replace(" ", "-")
-        result.add(slug if not seen[slug] else f"{slug}-{seen[slug]}")
-        seen[slug] += 1
-    return result
-
-
-def frontmatter(path):
-    match = re.match(r"^---\n(.*?)\n---\n", path.read_text(encoding="utf-8"), re.S)
-    if not match:
-        raise AssertionError(f"{path}: no frontmatter")
-    fields = {}
-    for line in match.group(1).split("\n"):
-        key, _, value = line.partition(":")
-        fields[key.strip()] = value.strip()
-    return fields
+CORE = runpy.run_path(str(ROOT / "scripts" / "validate-core"))
+prose_lines = CORE["prose_lines"]
+slugs = CORE["slugs"]
+frontmatter = CORE["frontmatter"]
+git_blob_sha = CORE["git_blob_sha"]
 
 
 def provenance_rows():
-    rows = []
-    for line in (ROOT / "PROVENANCE.md").read_text(encoding="utf-8").split("\n"):
-        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if len(cells) == 6 and cells[0].startswith("`"):
-            rows.append(tuple(cell.strip("`") for cell in cells[:5]))
-    return rows
-
-
-def git_blob_sha(data):
-    return hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()
+    return CORE["provenance_rows"](ROOT)
 
 
 class LinkTests(unittest.TestCase):
@@ -133,7 +96,7 @@ PATH_PATTERN = re.compile(
     r"\.agents/skills|\.agents/roles|\.claude/skills|\.claude/agents|specs/methodology"
     r"|(?<![\w.])\.codex(?!\w)|(?<![\w.])\.opencode/|scripts/")
 ALLOWED_PATHS = {
-    # Tools ship in the next increment; their paths are intentionally unchanged until then.
+    # The tools ship in scripts/ since this increment; the verbatim methodology text keeps the template path.
     ("methodology/document-ownership.md", "scripts/"): 1,
     ("methodology/issue-workflow.md", "scripts/"): 3,
     ("skills/relay/GITHUB_API.md", "scripts/"): 2,
