@@ -1,3 +1,4 @@
+import hashlib
 import json
 import shutil
 import subprocess
@@ -112,6 +113,82 @@ class PilotTests(unittest.TestCase):
         result = self.invoke(a)
         self.assertEqual(result.returncode, 2)
         self.assertIn("outside its root", result.stderr)
+
+
+# Baseline: jmartinlabs/agent-project-template e9a46160753c5e61f7d3291da9e6a0299f840aa0,
+# specs/methodology/approvals.md and .agents/roles/qa-review.md respectively.
+BASELINE_SHA256 = {
+    "methodology/approvals.md": "e87dc895d259d1839724e35340623957051302503504e2e9387d4bbe0797fa8f",
+    "roles/qa-review.md": "fa66317784b1dc82c718a651bccbe16242b2bf65a2a56ac69f4969ce43312de1",
+}
+
+
+class PilotBoundaryTests(unittest.TestCase):
+    setUp = PilotTests.setUp
+    invoke = PilotTests.invoke
+
+    def test_project_equal_to_artifact_is_rejected(self):
+        for entry in ("AGENTS.md", "CLAUDE.md"):
+            (self.bundle / entry).write_text("artifact", encoding="utf-8")
+        (self.bundle / "specs").mkdir()
+        (self.bundle / "specs/project-rules.md").write_text("rules", encoding="utf-8")
+        result = self.invoke(self.sandbox, "--project", str(self.bundle))
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("distinct from the installed artifact", result.stderr)
+
+    def test_nonexistent_project_is_blocked(self):
+        result = self.invoke(self.sandbox, "--project", str(self.sandbox / "missing"))
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("readiness blocked", result.stderr)
+
+    def test_git_entry_as_file_marks_the_root(self):
+        a = self.projects / "a"
+        (a / ".git").write_text("gitdir: elsewhere\n", encoding="utf-8")
+        nested = a / "nested"
+        nested.mkdir()
+        result = self.invoke(nested)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["project_root"], str(a))
+
+    def test_symlinked_config_candidate_outside_root_is_rejected(self):
+        a = self.projects / "a"
+        link = a / ".agents/harnesses/codex.json"
+        link.symlink_to(self.projects / "b" / ".agents/harnesses/codex.json")
+        result = self.invoke(a, "--coordinator", "codex")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("points outside", result.stderr)
+
+    def test_invalid_coordinator_is_rejected(self):
+        result = self.invoke(self.projects / "a", "--coordinator", "gemini")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("invalid choice", result.stderr)
+        self.assertEqual(result.stdout, "")
+
+    def test_other_v2_identities_are_accepted_without_config(self):
+        for coordinator in ("opencode", "hermes"):
+            with self.subTest(coordinator=coordinator):
+                result = self.invoke(self.projects / "a", "--coordinator", coordinator)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIsNone(json.loads(result.stdout)["coordinator_config_candidate"])
+
+    def test_skill_artifact_root_rule_matches_layout(self):
+        skill = ROOT / "skills/verify-project/SKILL.md"
+        self.assertIn("two directories above the Skill directory", skill.read_text(encoding="utf-8"))
+        self.assertEqual(skill.parent.parent.parent, ROOT)
+        self.assertTrue((skill.parent.parent.parent / "scripts/verify-project.py").is_file())
+
+    def test_canonical_files_equal_baseline_bytes(self):
+        for relative, digest in BASELINE_SHA256.items():
+            with self.subTest(path=relative):
+                self.assertEqual(hashlib.sha256((ROOT / relative).read_bytes()).hexdigest(), digest)
+
+    def test_license_is_mit_and_declared(self):
+        text = (ROOT / "LICENSE").read_text(encoding="utf-8")
+        self.assertTrue(text.startswith("MIT License\n"))
+        self.assertIn("Copyright (c) 2026 jmartinlabs", text)
+        for path in ("plugin.json", ".claude-plugin/plugin.json", ".antigravity-plugin/plugin.json"):
+            with self.subTest(path=path):
+                self.assertEqual(json.loads((ROOT / path).read_text())["license"], "MIT")
 
 
 if __name__ == "__main__":
