@@ -1,0 +1,83 @@
+name: Validate Agentic pilot
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.12']
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run regression tests and validate plugin and marketplace manifests
+        run: python3 -m unittest discover -s tests -v
+      - name: Validate plugin integrity
+        run: python3 scripts/validate-core
+      - name: Test work-issue
+        run: python3 tests/test-work-issue
+      - name: Test agent-relay
+        run: python3 tests/test-agent-relay
+      - name: Test delegation-route
+        run: python3 tests/test-delegation-route
+      - name: Test agent-usage
+        run: python3 tests/test-agent-usage
+      - name: Test auto-agent-usage
+        run: python3 tests/test-auto-agent-usage
+
+  claude-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      # The npm install runs the package's install.cjs (read-only token, no secrets).
+      # No lockfile pins transitive packages. First green run: 45656722504 at 2dc8015.
+      - name: Install the pinned Claude Code client outside the repository
+        run: |
+          mkdir "$RUNNER_TEMP/claude-client"
+          cd "$RUNNER_TEMP/claude-client"
+          npm init -y > /dev/null
+          npm install --no-save --ignore-scripts @anthropic-ai/claude-code@2.1.330
+          node node_modules/@anthropic-ai/claude-code/install.cjs
+          echo "$PWD/node_modules/.bin" >> "$GITHUB_PATH"
+      - name: Validate the plugin and marketplace strictly
+        run: |
+          export CLAUDE_CONFIG_DIR="$(mktemp -d)"
+          claude --version
+          claude plugin validate . --strict
+
+  required:
+    if: always()
+    needs: [pilot, claude-validate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+    steps:
+      - name: Fail unless every needed job succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "needed job results: $RESULTS"
+          for result in $RESULTS; do
+            [ "$result" = "success" ] || exit 1
+          done

@@ -1,0 +1,430 @@
+#!/usr/bin/env python3
+"""validate-core: integrity validator for the agentic plugin and for a project's harness files.
+
+  validate-core                      validate the plugin this script belongs to
+  validate-core --project DIR        validate DIR/.agents/harnesses/*.json (harness JSON v2)
+
+Read-only and offline: stdlib only, writes nothing. Exit 0 with no problems, 1 with problems
+(`rule: message` lines on stdout), 2 on bad usage.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import re
+import sys
+from collections import Counter
+from pathlib import Path
+
+PLUGIN_ROOT = Path(__file__).resolve().parent.parent
+# A hook prints a whole file into every session; Claude Code keeps only a preview of output
+# above ~10 KiB, so the budget keeps margin.
+HOOK_PRINT_BUDGET = 8704
+ASSET_DIRS = ("skills", "methodology", "roles", "agents", "templates")
+CLASSES = {"copy", "link-rewrite", "path-reword", "deliberate-delta"}
+MANIFESTS = ("plugin.json", ".claude-plugin/plugin.json", ".antigravity-plugin/plugin.json")
+MARKETPLACES = (".claude-plugin/marketplace.json", ".agents/plugins/marketplace.json")
+SHIMS = {
+    "agentic-work-issue": "work-issue",
+    "agentic-relay": "agent-relay",
+    "agentic-check-delegation-route": "check-delegation-route",
+    "agentic-usage-report": "report-agent-usage",
+    "agentic-usage-auto": "auto-agent-usage",
+    "agentic-verify-project": "verify-project.py",
+}
+# The agent catalogue is DEFAULT_AGENTS in scripts/work-issue (single source); these shipped
+# documents name the agents and must name all of them.
+CATALOGUE_TOOL = "scripts/work-issue"
+CATALOGUE_DOCS = ("methodology/issue-workflow.md", "skills/work-issue/SKILL.md", "templates/issue.md")
+
+# --- Harness JSON v2 (ported from the template validator `check_harness`) -------------------
+CANONICAL_ROLES = ("functional", "implementation", "qa-review", "infrastructure")
+EXTERNAL_TASKS = ("review", "investigate", "develop")
+EXTERNAL_MODES = ("automatic", "on_request", "disabled")
+EXTERNAL_TRANSPORTS = ("cli",)
+HARNESS_NAMES = ("claude", "codex", "opencode", "hermes")
+
+
+def unique_json_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate key: {key}")
+        result[key] = value
+    return result
+
+
+def reject_json_constant(value):
+    raise ValueError(f"invalid JSON constant: {value}")
+
+
+def load_json(path):
+    """Strict JSON: unique keys, no NaN/Infinity."""
+    return json.loads(Path(path).read_text(encoding="utf-8"), object_pairs_hook=unique_json_object,
+                      parse_constant=reject_json_constant)
+
+
+def check_harness(config, coordinator):
+    problems = []
+
+    def fields(value, allowed, location):
+        if not isinstance(value, dict):
+            problems.append(f"{location}: must be an object")
+            return False
+        for key in sorted(value.keys() - set(allowed)):
+            problems.append(f"{location}: unknown field {key}")
+        return True
+
+    def selection(value, location):
+        for key in ("model", "effort"):
+            setting = value.get(key)
+            if setting is not None and not (isinstance(setting, str) and setting.strip()):
+                problems.append(f"{location}.{key}: must be null or a non-empty string")
+
+    if not fields(config, ("version", "local", "external"), "config"):
+        return problems
+    if type(config.get("version")) is not int or config["version"] != 2:
+        problems.append("version must be integer 2")
+    local = config.get("local", {})
+    if fields(local, ("model", "effort", "profiles"), "local"):
+        selection(local, "local")
+        profiles = local.get("profiles", {})
+        if fields(profiles, CANONICAL_ROLES, "local.profiles"):
+            for role in CANONICAL_ROLES:
+                if role not in profiles:
+                    continue
+                levels = profiles[role]
+                location = f"local.profiles.{role}"
+                if not fields(levels, ("standard", "complex"), location):
+                    continue
+                for name in ("standard", "complex"):
+                    if name not in levels:
+                        continue
+                    profile = levels[name]
+                    level = f"{location}.{name}"
+                    if fields(profile, ("model", "effort"), level):
+                        selection(profile, level)
+                        if all(profile.get(key) is None for key in ("model", "effort")):
+                            problems.append(f"{level}: must set model or effort")
+
+    external = config.get("external", {})
+    if not isinstance(external, dict):
+        return problems + ["external: must be an object"]
+    for client, entry in external.items():
+        location = f"external.{client}"
+        if not re.fullmatch(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)*", client):
+            problems.append(f"{location}: invalid client name")
+        if not fields(entry, ("enabled", "transport", "model", "effort", "tasks"), location):
+            continue
+        if not isinstance(entry.get("enabled"), bool):
+            problems.append(f"{location}.enabled: must be boolean")
+        if entry.get("transport") not in EXTERNAL_TRANSPORTS:
+            problems.append(f"{location}.transport: must be cli")
+        selection(entry, location)
+        tasks = entry.get("tasks")
+        if not fields(tasks, EXTERNAL_TASKS, f"{location}.tasks"):
+            continue
+        for task, mode in tasks.items():
+            if mode not in EXTERNAL_MODES:
+                problems.append(f"{location}.{task}: invalid mode")
+            elif mode == "automatic" and (coordinator, client, task) != ("claude", "codex", "review"):
+                problems.append(f"{location}.{task}: automatic is only for Claude Code to Codex review")
+    return problems
+
+
+def check_project_harnesses(project):
+    """Problems (`harness-config: ...`) for <project>/.agents/harnesses/*.json."""
+    project = Path(project).resolve()
+    errors = []
+
+    def fail(message):
+        errors.append(f"harness-config: {message}")
+
+    legacy = project / ".agents/external-agents.json"
+    if legacy.exists() or legacy.is_symlink():
+        fail("remove obsolete .agents/external-agents.json")
+    directory = project / ".agents/harnesses"
+    if not directory.resolve().is_relative_to(project):
+        fail("harness directory must stay inside the project")
+    elif directory.is_dir():
+        for path in sorted(directory.iterdir()):
+            if path.suffix != ".json" or path.stem not in HARNESS_NAMES:
+                fail(f"invalid coordinator filename: {path.name}")
+                continue
+            if not path.is_file() or not path.resolve().is_relative_to(project):
+                fail(f"invalid coordinator file: {path.name}")
+                continue
+            try:
+                config = load_json(path)
+            except (OSError, ValueError) as error:
+                fail(f"{path.name}: {error}")
+                continue
+            for problem in check_harness(config, path.stem):
+                fail(f"{path.name}: {problem}")
+    return errors
+
+
+def harness_report(project):
+    directory = Path(project).resolve() / ".agents/harnesses"
+    names = sorted(path.name for path in directory.glob("*.json")) if directory.is_dir() else []
+    return f"harness files checked: {', '.join(names) if names else 'none'}"
+
+
+# --- Plugin integrity ---------------------------------------------------------------------
+def prose_lines(text):
+    """Lines outside fenced code, with inline code spans blanked."""
+    fenced = False
+    for number, line in enumerate(text.split("\n"), 1):
+        if re.match(r"^\s*(```|~~~)", line):
+            fenced = not fenced
+            continue
+        if not fenced:
+            yield number, re.sub(r"`[^`]*`", "", line)
+
+
+def slugs(path):
+    seen = Counter()
+    result = set()
+    for _, line in prose_lines(Path(path).read_text(encoding="utf-8")):
+        match = re.match(r"^#{1,6}\s+(.*?)\s*#*\s*$", line)
+        if not match:
+            continue
+        raw = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", match.group(1))
+        slug = re.sub(r"[^\w\- ]", "", raw.lower()).replace(" ", "-")
+        result.add(slug if not seen[slug] else f"{slug}-{seen[slug]}")
+        seen[slug] += 1
+    return result
+
+
+def frontmatter(path):
+    match = re.match(r"^---\n(.*?)\n---\n", Path(path).read_text(encoding="utf-8"), re.S)
+    if not match:
+        raise ValueError(f"{path}: no frontmatter")
+    fields = {}
+    for line in match.group(1).split("\n"):
+        key, _, value = line.partition(":")
+        fields[key.strip()] = value.strip()
+    return fields
+
+
+def git_blob_sha(data):
+    return hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()
+
+
+def provenance_rows(root):
+    rows = []
+    for line in (Path(root) / "PROVENANCE.md").read_text(encoding="utf-8").split("\n"):
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) == 6 and cells[0].startswith("`"):
+            rows.append(tuple(cell.strip("`") for cell in cells[:5]))
+    return rows
+
+
+def plugin_markdown(root):
+    root = Path(root)
+    return [path for path in sorted(root.rglob("*.md"))
+            if path.relative_to(root).parts[0] not in (".git", "tests")]
+
+
+def check_manifests(root):
+    errors = []
+    loaded = {}
+    for name in MANIFESTS:
+        try:
+            loaded[name] = load_json(root / name)
+        except (OSError, ValueError) as error:
+            errors.append(f"manifest: {name}: {error}")
+    for key in ("name", "version", "license"):
+        values = {name: data.get(key) for name, data in loaded.items()}
+        if any(not isinstance(value, str) or not value for value in values.values()):
+            errors.append(f"manifest: {key} must be a non-empty string in every manifest: {values}")
+        elif len(set(values.values())) != 1:
+            errors.append(f"manifest: {key} differs between manifests: {values}")
+    names = {data.get("name") for data in loaded.values()}
+    for name in MARKETPLACES:
+        try:
+            catalog = load_json(root / name)
+        except (OSError, ValueError) as error:
+            errors.append(f"manifest: {name}: {error}")
+            continue
+        listed = {entry.get("name") for entry in catalog.get("plugins", []) if isinstance(entry, dict)}
+        if not listed or not listed <= names:
+            errors.append(f"manifest: {name} lists {sorted(listed, key=str)}, expected {sorted(names, key=str)}")
+    if not (root / "LICENSE").is_file():
+        errors.append("manifest: LICENSE is missing")
+    return errors
+
+
+def check_provenance(root):
+    errors = []
+    rows = provenance_rows(root)
+    listed = {row[2] for row in rows}
+    if len(listed) != len(rows):
+        errors.append("provenance: duplicate destination")
+    for _source, blob, destination, digest, klass in rows:
+        if klass not in CLASSES:
+            errors.append(f"provenance: {destination}: unknown class {klass}")
+        if not re.fullmatch(r"[0-9a-f]{40}", blob):
+            errors.append(f"provenance: {destination}: malformed source blob")
+        try:
+            data = (root / destination).read_bytes()
+        except OSError:
+            errors.append(f"provenance: {destination}: listed but missing")
+            continue
+        if hashlib.sha256(data).hexdigest() != digest:
+            errors.append(f"provenance: {destination}: sha256 differs from PROVENANCE.md")
+        if klass == "copy" and git_blob_sha(data) != blob:
+            errors.append(f"provenance: {destination}: class copy but blob differs from the source")
+    for directory in ASSET_DIRS:
+        for path in sorted((root / directory).rglob("*")):
+            relative = path.relative_to(root).as_posix()
+            if path.is_file() and relative != "skills/verify-project/SKILL.md" and relative not in listed:
+                errors.append(f"provenance: {relative} is not in PROVENANCE.md")
+    return errors
+
+
+def check_hook(root):
+    try:
+        config = load_json(root / "hooks/hooks.json")
+        (group,) = config["hooks"]["SessionStart"]
+        (hook,) = group["hooks"]
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        return [f"hook: hooks/hooks.json is not the single SessionStart hook ({error})"]
+    if list(config) != ["hooks"] or list(config["hooks"]) != ["SessionStart"] or hook.get("type") != "command":
+        return ["hook: hooks/hooks.json must hold only one SessionStart command hook"]
+    match = re.fullmatch(r'cat "\$\{CLAUDE_PLUGIN_ROOT\}/(skills/orchestrate/SKILL\.md)" 2>/dev/null \|\| true',
+                         hook.get("command", ""))
+    if not match:
+        return [f"hook: unexpected command {hook.get('command')!r}"]
+    printed = root / match.group(1)
+    if not printed.is_file():
+        return [f"hook: printed file {match.group(1)} is missing"]
+    if printed.stat().st_size > HOOK_PRINT_BUDGET:
+        return [f"hook: {match.group(1)} is {printed.stat().st_size} bytes, budget {HOOK_PRINT_BUDGET}"]
+    return []
+
+
+def check_frontmatter(root):
+    errors = []
+    for path in sorted((root / "skills").glob("*/SKILL.md")):
+        try:
+            fields = frontmatter(path)
+        except ValueError as error:
+            errors.append(f"frontmatter: {error}")
+            continue
+        if fields.get("name") != path.parent.name:
+            errors.append(f"frontmatter: {path.relative_to(root)}: name must be {path.parent.name}")
+        if not fields.get("description"):
+            errors.append(f"frontmatter: {path.relative_to(root)}: description missing")
+    for path in sorted((root / "agents").glob("*.md")):
+        relative = path.relative_to(root)
+        try:
+            fields = frontmatter(path)
+        except ValueError as error:
+            errors.append(f"frontmatter: {error}")
+            continue
+        if fields.get("name") != path.stem:
+            errors.append(f"frontmatter: {relative}: name must be {path.stem}")
+        if not fields.get("description"):
+            errors.append(f"frontmatter: {relative}: description missing")
+        if fields.get("model") != "inherit":
+            errors.append(f"frontmatter: {relative}: model must be inherit")
+        for forbidden in ("hooks", "permissionMode", "mcpServers"):
+            if forbidden in fields:
+                errors.append(f"frontmatter: {relative}: {forbidden} is not allowed in plugin agents")
+        if f"${{CLAUDE_PLUGIN_ROOT}}/roles/{path.stem}.md" not in path.read_text(encoding="utf-8"):
+            errors.append(f"frontmatter: {relative}: must read ${{CLAUDE_PLUGIN_ROOT}}/roles/{path.stem}.md")
+        if not (root / "roles" / f"{path.stem}.md").is_file():
+            errors.append(f"frontmatter: {relative}: roles/{path.stem}.md is missing")
+    return errors
+
+
+def check_links(root):
+    errors = []
+    for path in plugin_markdown(root):
+        for number, line in prose_lines(path.read_text(encoding="utf-8")):
+            for target in re.findall(r"\]\(([^)\s]+)\)", line):
+                if re.match(r"^[a-z][a-z0-9+.-]*:", target):
+                    continue
+                name, _, anchor = target.partition("#")
+                destination = path if not name else (path.parent / name).resolve()
+                where = f"{path.relative_to(root)}:{number}: {target}"
+                if not destination.is_relative_to(root):
+                    errors.append(f"links: {where} leaves the plugin")
+                elif not destination.exists():
+                    errors.append(f"links: {where} does not exist")
+                elif anchor and not (destination.is_file() and destination.suffix == ".md"
+                                     and anchor in slugs(destination)):
+                    errors.append(f"links: {where}: no such heading")
+    return errors
+
+
+def check_shims(root):
+    errors = []
+    for shim, tool in SHIMS.items():
+        path = root / "bin" / shim
+        if not path.is_file() or not path.stat().st_mode & 0o111:
+            errors.append(f"shims: bin/{shim} must be an executable file")
+        elif f"/../scripts/{tool}\"" not in path.read_text(encoding="utf-8"):
+            errors.append(f"shims: bin/{shim} does not exec scripts/{tool}")
+        if not (root / "scripts" / tool).is_file():
+            errors.append(f"shims: scripts/{tool} is missing")
+    return errors
+
+
+def check_agent_catalogue(root):
+    errors = []
+    try:
+        source = (root / CATALOGUE_TOOL).read_text(encoding="utf-8")
+    except OSError as error:
+        return [f"agent-catalogue: {CATALOGUE_TOOL}: {error}"]
+    match = re.search(r"(?m)^DEFAULT_AGENTS = \(([^)]*)\)", source)
+    agents = re.findall(r'"([a-z][a-z0-9-]*)"', match[1]) if match else []
+    if not agents:
+        return [f"agent-catalogue: {CATALOGUE_TOOL}: DEFAULT_AGENTS catalogue not found"]
+    for name in CATALOGUE_DOCS:
+        try:
+            text = (root / name).read_text(encoding="utf-8")
+        except OSError as error:
+            errors.append(f"agent-catalogue: {name}: {error}")
+            continue
+        for agent in agents:
+            if f"`{agent}`" not in text and f"`agent:{agent}`" not in text:
+                errors.append(f"agent-catalogue: {name}: agent catalogue drift, missing {agent}")
+    return errors
+
+
+def validate_plugin(root=PLUGIN_ROOT):
+    root = Path(root).resolve()
+    errors = []
+    for check in (check_manifests, check_provenance, check_hook, check_frontmatter, check_links, check_shims,
+                  check_agent_catalogue):
+        errors.extend(check(root))
+    return errors
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--project", type=Path,
+                        help="validate <PROJECT>/.agents/harnesses/*.json instead of the plugin")
+    parser.add_argument("--root", type=Path, default=PLUGIN_ROOT, help="plugin root (default: this plugin)")
+    args = parser.parse_args(argv)
+    if args.project is not None:
+        if not args.project.is_dir():
+            print(f"Not validated: {args.project} is not a directory", file=sys.stderr)
+            return 2
+        errors = check_project_harnesses(args.project)
+        report = harness_report(args.project)
+    else:
+        errors = validate_plugin(args.root)
+        report = f"plugin checked: {Path(args.root).resolve()}"
+    for error in errors:
+        print(error)
+    print(report)
+    print("validate-core: %s" % (f"{len(errors)} problem(s)" if errors else "OK"))
+    return 1 if errors else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,14 @@
+{
+  "name": "agentic-harness",
+  "owner": {
+    "name": "jmartinlabs"
+  },
+  "plugins": [
+    {
+      "name": "agentic",
+      "source": "./",
+      "description": "Agentic Harness plugin: shared skills, methodology, roles and tools for agent-driven projects."
+    }
+  ],
+  "description": "Agentic Harness repository marketplace."
+}
