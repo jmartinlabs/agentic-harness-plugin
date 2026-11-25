@@ -6,7 +6,7 @@ Work tracked in Issues follows the [issue workflow](issue-workflow.md): when a P
 Language: methodology and guidance are written in English. The comment-protocol wire values the
 tools parse (`Autor`, `Rol`, `Fase`, `Huella del contexto`) and `docs/GUIA_VISUAL_ORQUESTACION.md`
 stay in Spanish on purpose; do not translate them without changing `scripts/work-issue` and its tests.
-This is an uninitialized template. No product, stack or architecture has been approved.
+This plugin ships the methodology; a project created from it starts uninitialized, with no product, stack or architecture approved. Nothing below is copied into the project: the plugin keeps skills, roles, methodology, templates, scripts and agents, and the documents in the table are created in the project, from the plugin's templates where one exists, by the skill named.
 
 | Document | Owns | Created/updated by |
 | --- | --- | --- |

@@ -11,6 +11,14 @@ ARTIFACT = Path(__file__).resolve().parent.parent
 PLUGIN_OWNED = (".agents/skills", ".agents/roles", ".claude/skills", ".claude/agents",
                 ".opencode/agents", ".codex", "specs/methodology")
 TEMPLATES = "templates"
+SHIM_RULES = ("agentic-verify-project", "agentic-work-issue", "agentic-relay",
+              "agentic-check-delegation-route", "agentic-usage-report", "agentic-usage-auto")
+
+
+def permission_rules():
+    """Allow rules for the project's untracked .claude/settings.local.json. Printed, never written."""
+    allow = [f"Read(/{ARTIFACT}/**)"] + [f"Bash({name}:*)" for name in SHIM_RULES]
+    return {"permissions": {"allow": allow}}
 
 
 def project_root(start):
@@ -64,7 +72,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project", type=Path, default=Path.cwd())
     parser.add_argument("--coordinator", choices=COORDINATORS)
+    parser.add_argument("--print-rules", action="store_true",
+                        help="print the .claude/settings.local.json permission rules for this plugin and exit; writes nothing")
     args = parser.parse_args()
+    if args.print_rules:
+        print(json.dumps(permission_rules(), indent=2))
+        return 0
     try:
         root = project_root(args.project)
         if root == ARTIFACT:

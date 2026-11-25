@@ -5,10 +5,11 @@ description: Build and verify the smallest end-to-end walking skeleton from appr
 
 # bootstrap
 
-This Skill still describes the pre-plugin flow; it is rewritten in the template-transformation increment.
+Plugin model: this Skill, its methodology, roles, templates, scripts and agents stay in the plugin and are never
+copied into the project. Only the documents this Skill generates are created in the project, from the plugin's templates.
 
 ## Inputs
-Read `AGENTS.md`, [document ownership](../../methodology/document-ownership.md), existing state and applicable guidelines before acting.
+Read the project's `AGENTS.md` and `specs/project-rules.md`, [document ownership](../../methodology/document-ownership.md), existing state and applicable guidelines before acting.
 ## Outputs
 Minimal working infrastructure, basic automated tests, reproducible commands, guideline
 updates, evidence in setup progress and a working local commit.
@@ -34,7 +35,7 @@ updates, evidence in setup progress and a working local commit.
 6. Establish one canonical verification command shared by local use and CI, following
    the CI contract's entry point requirements. Reuse an adequate existing command;
    do not create a redundant wrapper. Document its working directory, prerequisites,
-   comparison inputs and forced full mode in AGENTS.md and quality guidelines.
+   comparison inputs and forced full mode in the project's `AGENTS.md` and quality guidelines.
    Verify failure propagation, coverage, local/CI parity within profiles, evidence
    validity and absence of duplicate suites; use the CI contract as the single policy.
    Document exact working directories, install/run/check commands and prerequisites.

@@ -31,7 +31,12 @@ SHIMS = {
     "agentic-check-delegation-route": "check-delegation-route",
     "agentic-usage-report": "report-agent-usage",
     "agentic-usage-auto": "auto-agent-usage",
+    "agentic-verify-project": "verify-project.py",
 }
+# The agent catalogue is DEFAULT_AGENTS in scripts/work-issue (single source); these shipped
+# documents name the agents and must name all of them.
+CATALOGUE_TOOL = "scripts/work-issue"
+CATALOGUE_DOCS = ("methodology/issue-workflow.md", "skills/work-issue/SKILL.md", "templates/issue.md")
 
 # --- Harness JSON v2 (ported from the template validator `check_harness`) -------------------
 CANONICAL_ROLES = ("functional", "implementation", "qa-review", "infrastructure")
@@ -368,10 +373,33 @@ def check_shims(root):
     return errors
 
 
+def check_agent_catalogue(root):
+    errors = []
+    try:
+        source = (root / CATALOGUE_TOOL).read_text(encoding="utf-8")
+    except OSError as error:
+        return [f"agent-catalogue: {CATALOGUE_TOOL}: {error}"]
+    match = re.search(r"(?m)^DEFAULT_AGENTS = \(([^)]*)\)", source)
+    agents = re.findall(r'"([a-z][a-z0-9-]*)"', match[1]) if match else []
+    if not agents:
+        return [f"agent-catalogue: {CATALOGUE_TOOL}: DEFAULT_AGENTS catalogue not found"]
+    for name in CATALOGUE_DOCS:
+        try:
+            text = (root / name).read_text(encoding="utf-8")
+        except OSError as error:
+            errors.append(f"agent-catalogue: {name}: {error}")
+            continue
+        for agent in agents:
+            if f"`{agent}`" not in text and f"`agent:{agent}`" not in text:
+                errors.append(f"agent-catalogue: {name}: agent catalogue drift, missing {agent}")
+    return errors
+
+
 def validate_plugin(root=PLUGIN_ROOT):
     root = Path(root).resolve()
     errors = []
-    for check in (check_manifests, check_provenance, check_hook, check_frontmatter, check_links, check_shims):
+    for check in (check_manifests, check_provenance, check_hook, check_frontmatter, check_links, check_shims,
+                  check_agent_catalogue):
         errors.extend(check(root))
     return errors
 

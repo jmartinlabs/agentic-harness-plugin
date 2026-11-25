@@ -224,6 +224,23 @@ class PluginCase(unittest.TestCase):
         (root / "scripts" / "work-issue").unlink()
         self.assertRule(root, "shims")
 
+    def test_agent_catalogue_drift_is_detected(self):
+        names = ("methodology/issue-workflow.md", "skills/work-issue/SKILL.md", "templates/issue.md")
+        for name in names:
+            root = self.fixture()
+            path = root / name
+            path.write_text(path.read_text().replace("`hermes`", "`other`").replace("`agent:hermes`", "`agent:other`"))
+            found = [e for e in self.problems(root) if e.startswith("agent-catalogue:")]
+            self.assertEqual(found, [f"agent-catalogue: {name}: agent catalogue drift, missing hermes"])
+        root = self.fixture()
+        path = root / "scripts" / "work-issue"
+        path.write_text(path.read_text().replace('DEFAULT_AGENTS = ("opencode", "hermes", "codex", "claude")',
+                                                 'DEFAULT_AGENTS = ("opencode", "hermes", "codex", "claude", "newone")'))
+        found = [e for e in self.problems(root) if e.startswith("agent-catalogue:")]
+        self.assertEqual(len(found), 3, found)
+        path.write_text(path.read_text().replace("DEFAULT_AGENTS", "OTHER_AGENTS", 1))
+        self.assertRule(root, "agent-catalogue")
+
 
 class IndependentCoverage(PluginCase):
     """Direct checks of the shared helpers' effects, without the test_plugin helpers."""

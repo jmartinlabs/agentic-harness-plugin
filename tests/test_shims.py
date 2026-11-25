@@ -8,8 +8,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
 SHIMS = ("agentic-work-issue", "agentic-relay", "agentic-check-delegation-route",
-         "agentic-usage-report", "agentic-usage-auto")
-TOOLS = ("work-issue", "agent-relay", "check-delegation-route", "report-agent-usage", "auto-agent-usage")
+         "agentic-usage-report", "agentic-usage-auto", "agentic-verify-project")
+TOOLS = ("work-issue", "agent-relay", "check-delegation-route", "report-agent-usage", "auto-agent-usage",
+         "verify-project.py")
 
 
 class TempCase(unittest.TestCase):

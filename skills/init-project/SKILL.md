@@ -5,17 +5,18 @@ description: Start or resume interactive project initialization, from identity t
 
 # init-project
 
-This Skill still describes the pre-plugin flow; it is rewritten in the template-transformation increment.
+Plugin model: this Skill, its methodology, roles, templates, scripts and agents stay in the plugin and are never
+copied into the project. Only the documents this Skill generates are created in the project, from the plugin's templates.
 
 ## Inputs
-Read `AGENTS.md`, [document ownership](../../methodology/document-ownership.md), existing state and applicable guidelines before acting.
+Read the project's `AGENTS.md` and `specs/project-rules.md`, [document ownership](../../methodology/document-ownership.md), existing state and applicable guidelines before acting.
 ## Outputs
 `specs/project.md`, canonical guidelines, `specs/setup-progress.md`, a verified bootstrap
-and an approved `specs/roadmap.md`. Never generate an application inside the template itself.
+and an approved `specs/roadmap.md`, all created in the project. Never generate an application inside the plugin or the template.
 ## Procedure
-- Inspect existing code, references and documents first.
-- In the template itself: help create or open an independent derived repository (publishing needs authorization).
-- Already in a derived project: do not clone again. Prefer the current checkout; use the
+- Inspect existing code, references and documents first. A project that already has working code or approved decisions is never re-initialized: use `adopt-project`.
+- No project yet (the plugin or the template itself is open): help create or open an independent project repository from the template (publishing needs authorization), install the plugin there and resume in that project.
+- Already in a project: do not clone again. Prefer the current checkout; use the
   [local worktree policy](../../methodology/approvals.md#local-worktrees) if isolation helps.
 
 ### Resume protocol
@@ -65,8 +66,8 @@ Follow the bootstrap Skill. Verify the real end-to-end flow and tests before mar
 a running process alone is not enough.
 ### Stage 5 — Guidelines
 Document the implemented architecture and approved rationale. Complete architecture, UI, quality
-and security guidelines; mark inapplicable areas with reasons. Update AGENTS.md with the project
-description, real commands and links. Add enforceable checks (tests, linters, CI) proven on valid
+and security guidelines; mark inapplicable areas with reasons. Merge the project
+description, real commands and links into the project's `AGENTS.md`; never overwrite it. Add enforceable checks (tests, linters, CI) proven on valid
 and invalid cases; do not invent agent hooks.
 ### Stage 6 — Roadmap
 Follow the roadmap Skill. Get approval and commit the initial roadmap.

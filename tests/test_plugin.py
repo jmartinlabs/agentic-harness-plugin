@@ -102,6 +102,8 @@ ALLOWED_PATHS = {
     ("skills/relay/GITHUB_API.md", "scripts/"): 2,
     ("skills/work-issue/SKILL.md", "scripts/"): 2,
     ("skills/relay/SKILL.md", "scripts/"): 1,
+    # adopt-project runs the plugin's own scripts/verify-project.py to list plugin-owned copies in the project.
+    ("skills/adopt-project/SKILL.md", "scripts/"): 2,
     # Template-only validator named in a verbatim sentence; the plugin does not ship it.
     ("methodology/dynamic-agents.md", "scripts/"): 1,
     # Derived-project CI path families and examples of a project's own harness (project-owned).

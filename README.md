@@ -1,5 +1,16 @@
 # Agentic Harness · pilot candidate
 
+## Quick start
+
+1. Create the project repository from the template (GitHub "Use this template").
+2. Add the marketplace pinned to a reviewed tag or commit SHA: `claude plugin marketplace add jmartinlabs/agentic-harness-plugin#<tag-or-sha>`. The pin is the project's reference revision; no other lock file exists.
+3. Install the plugin: `claude plugin install agentic@agentic-harness --scope project`. The tested flows used `--scope local`; project scope is untested.
+4. Allow the plugin's files and tools. Either approve the permission prompts with "don't ask again" (interactive; untested), or run `agentic-verify-project --print-rules` and paste its JSON into the project's untracked `.claude/settings.local.json` (verified in `-p`; see "Permissions for plugin files").
+5. Run `/agentic:verify-project` to check readiness.
+6. Run `/agentic:init-project` for a new project, or `/agentic:adopt-project` for an existing one.
+
+Nothing common is copied into the project: skills, roles, methodology, templates, scripts and agents stay in the plugin, and the skills create only project documents (`specs/project.md`, `specs/setup-progress.md`, `specs/roadmap.md` and so on).
+
 This is a candidate for [SPEC #77](https://github.com/jmartinlabs/agent-project-template/issues/77#issuecomment-7165024336): the plugin `agentic` centralizes the common harness capabilities so that a project keeps only its context, configuration, rules and application files. It packages the operating core below plus a read-only readiness Skill and diagnostic script. It does not replace an existing harness. Licensed under the MIT licence (`LICENSE`, holder jmartinlabs, 2026).
 
 `methodology/approvals.md` is the canonical approvals source; where it mentions `orchestrate`, it refers to the `orchestrate` Skill in this package.
@@ -26,7 +37,7 @@ Deliberate delta: `skills/orchestrate/SKILL.md` step 4 now says that the user co
 - OpenCode `review-read` and the OpenCode adapters (OpenCode is a second-stage client), Codex hook wiring (`.codex/hooks.json`; its configuration test skips until it ships), and the template-only tooling (`validate-template`, `test-validator`, `check-mermaid`, the evals) are not packaged.
 - `scripts/validate-core` replaces the template's v2 schema checker; no Skill calls it yet. `methodology/dynamic-agents.md` stays verbatim and still names the template validator.
 - Native adapters other than the Claude Code agents (Codex hooks, OpenCode agents and plugin, Hermes) are not packaged.
-- The `init-project`, `adopt-project` and `bootstrap` Skills still describe the pre-plugin, copy-based flow; they are rewritten in the template-transformation increment (each says so at its top). `methodology/document-ownership.md` still opens with the template's wording.
+- The `init-project`, `adopt-project` and `bootstrap` Skills and the first paragraph of `methodology/document-ownership.md` are rewritten for the plugin model (nothing common is copied into the project) but untested against a live client; the template repository itself is not yet reduced, and project-scope install, the interactive permission prompts and the `.claude/settings.json` marketplace pin flow are unrun.
 - The template's `docs/` guides (visual guide, client adapters, evals) are not part of the plugin; the sentences that mention them say so.
 - No claim is made about how Codex or Antigravity load these assets at runtime; only the earlier pilot observations below exist.
 
@@ -46,7 +57,7 @@ Observed with an installed plugin (from the cache), Claude Code 2.1.330, `claude
 Observed with an installed plugin, Claude Code 2.1.330, `claude -p`, local synthetic, 4 sessions; the evidence is kept by the coordinator outside this repository.
 
 - `bin/agentic-*` are on the Bash tool PATH only while the plugin is enabled (exit 127 when it is not).
-- The portable rule `Bash(agentic-work-issue:*)` in `.claude/settings.local.json` let the command run without a prompt; without the rule it was denied. The same pattern for the other four shims was not tested.
+- The portable rule `Bash(agentic-work-issue:*)` in `.claude/settings.local.json` let the command run without a prompt; without the rule it was denied. The same pattern for the other shims was not tested; `agentic-verify-project --print-rules` prints all the rules (it writes nothing; the Read rule uses the install path it runs from).
 - A read-only `next --agent claude` against the owner's Project worked.
 - With no `--repo`, `--owner` or `--project` the tool refuses; it does not read them from `tracker.local.yaml`. This equals the baseline behaviour.
 
