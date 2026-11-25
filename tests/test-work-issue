@@ -18,9 +18,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "work-issue"
-FIXTURE = ROOT / "scripts" / "fixtures" / "work-issue-project.json"
-SKILL = ROOT / ".agents" / "skills" / "work-issue" / "SKILL.md"
-PROTOCOL = ROOT / "specs" / "methodology" / "issue-workflow.md"
+FIXTURE = ROOT / "tests" / "fixtures" / "work-issue-project.json"
+SKILL = ROOT / "skills" / "work-issue" / "SKILL.md"
+PROTOCOL = ROOT / "methodology" / "issue-workflow.md"
 
 MODULE = runpy.run_path(str(SCRIPT))
 normalise = MODULE["normalise"]
@@ -2316,19 +2316,19 @@ class ContractTests(unittest.TestCase):
             self.assertIn(token, text, token)
 
     def test_documentation_wiring(self):
-        agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
-        orchestrate = (ROOT / ".agents" / "skills" / "orchestrate" / "SKILL.md").read_text(
+        agents = (ROOT / "methodology" / "document-ownership.md").read_text(encoding="utf-8")
+        orchestrate = (ROOT / "skills" / "orchestrate" / "SKILL.md").read_text(
             encoding="utf-8")
-        init_project = (ROOT / ".agents" / "skills" / "init-project" / "SKILL.md").read_text(
+        init_project = (ROOT / "skills" / "init-project" / "SKILL.md").read_text(
             encoding="utf-8")
-        spec = (ROOT / ".agents" / "skills" / "spec" / "SKILL.md").read_text(encoding="utf-8")
+        spec = (ROOT / "skills" / "spec" / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("issue-workflow.md", agents)
         self.assertIn("work-issue", orchestrate)
         self.assertIn("planning Issues each SPEC needs in `Backlog`", init_project)
         self.assertIn("generate its executable\nIssues", init_project)
         self.assertIn("generate the executable Issues derived from the approved", spec)
         self.assertTrue((ROOT / "templates" / "issue.md").is_file())
-        self.assertTrue((ROOT / ".claude" / "skills" / "work-issue" / "SKILL.md").is_file())
+        self.assertTrue((ROOT / "skills" / "work-issue" / "SKILL.md").is_file())
 
 
 if __name__ == "__main__":
