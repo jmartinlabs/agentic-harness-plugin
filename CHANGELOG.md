@@ -14,6 +14,10 @@ First release. Not tagged or released until the owner approves it.
 - `scripts/validate-core` (v2 harness schema checker) and the read-only readiness diagnostic, which also reports `project_pin` and `pin_status` (informational).
 - Manifests for Claude Code, Codex and Antigravity; marketplace descriptors for Claude Code and Codex.
 
+### Fixed during release review
+- `relay` skill no longer tells to pass repository flags the tool does not accept; `adopt-project` uses the new read-only `verify-project.py --inventory`, which works on a project that lacks the entry files.
+- `methodology/dynamic-agents.md` names `validate-core` as the v2 checker.
+
 ### Known limitations
 Evidence is local and synthetic. Every release must bump `version`: a branch-tracking install does not update at an unchanged `version`.
 

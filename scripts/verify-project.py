@@ -89,13 +89,50 @@ def project_pin(root, version):
     return ref, "sha-or-branch"
 
 
+def inventory_root(start):
+    start = start.resolve(strict=True)
+    if start.is_file():
+        start = start.parent
+    for directory in (start, *start.parents):
+        if (directory / ".git").exists() or (directory / ".git").is_symlink():
+            return directory
+    raise ValueError("no Git project at or above this directory; select the intended project")
+
+
+def inventory(project):
+    root = inventory_root(project)
+    if root == ARTIFACT:
+        raise ValueError("select a project checkout distinct from the installed artifact")
+    version = json.loads(file_under(ARTIFACT, "plugin.json").read_text(encoding="utf-8"))["version"]
+    pin, pin_status = project_pin(root, version)
+    return {
+        "artifact_root": str(ARTIFACT),
+        "artifact_version": version,
+        "project_root": str(root),
+        "entry_files": {name: (root / name).is_file()
+                        for name in ("AGENTS.md", "CLAUDE.md", "specs/project-rules.md")},
+        "plugin_owned_paths_in_project": plugin_owned_paths(root),
+        "project_pin": pin,
+        "pin_status": pin_status,
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project", type=Path, default=Path.cwd())
     parser.add_argument("--coordinator", choices=COORDINATORS)
     parser.add_argument("--print-rules", action="store_true",
                         help="print the .claude/settings.local.json permission rules for this plugin and exit; writes nothing")
+    parser.add_argument("--inventory", action="store_true",
+                        help="read-only inventory for a project not yet adopted: needs only a Git root, no entry files")
     args = parser.parse_args()
+    if args.inventory:
+        try:
+            print(json.dumps(inventory(args.project), sort_keys=True))
+        except (OSError, ValueError, KeyError) as error:
+            print(f"inventory blocked: {error}", file=sys.stderr)
+            return 2
+        return 0
     if args.print_rules:
         print(json.dumps(permission_rules(), indent=2))
         return 0
