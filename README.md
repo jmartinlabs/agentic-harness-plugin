@@ -2,13 +2,15 @@
 
 v1.0.0 (candidate until the owner approves the merge, tag and release): Claude Code verified end to end; Codex verified for install, skills, diagnostic and reading, with native delegation, v2 handling and hooks observed in single runs; Antigravity verified for skills and diagnostic through its native install (local synthetic). All client evidence was gathered on 0.1.0 content (commits 37fb4f3 and 74e7fab); 1.0.0 content has not been loaded by a client yet (see [Evidence scope](#evidence-scope)). See [Clients](#clients-v1-targets-observed) and [Known limitations](#known-limitations-observed). See [CHANGELOG.md](CHANGELOG.md) and [RELEASING.md](RELEASING.md). The limitations and evidence labels below still apply.
 
+**1.1.0 (unreleased candidate):** each release publishes its own marketplace name, `agentic-harness-<major>-<minor>-<patch>`, so projects on different versions install and update independently. In the commands below `X.Y.Z` is the version and `X-Y-Z` the same with dashes. The sections after the Quick start record earlier evidence, gathered with the unversioned name `agentic-harness` of v1.0.0.
+
 ## Quick start
 
 1. Create the project repository from the template (GitHub "Use this template").
-2. Add the marketplace and install the plugin, always, even when the project already declares them in its committed `.claude/settings.json`: `claude plugin marketplace add jmartinlabs/agentic-harness-plugin#<tag-or-sha> --scope local`, then `claude plugin install agentic@agentic-harness --scope local`. The committed pin is the project's version record, but it was NOT sufficient for install in `-p` (install failed with 'Plugin "agentic" not found in marketplace "agentic-harness"'; interactive startup behaviour is untested). Both commands write `extraKnownMarketplaces` and `enabledPlugins` into the untracked `.claude/settings.local.json`. The tested flows used `--scope local`; project scope is untested.
+2. Add the marketplace and install the plugin, always, even when the project already declares them in its committed `.claude/settings.json`: `claude plugin marketplace add jmartinlabs/agentic-harness-plugin#vX.Y.Z --scope local`, then `claude plugin install agentic@agentic-harness-X-Y-Z --scope local`. The committed pin is the project's version record, but it was NOT sufficient for install in `-p` (install failed with 'Plugin "agentic" not found in marketplace "agentic-harness"'; interactive startup behaviour is untested). Both commands write `extraKnownMarketplaces` and `enabledPlugins` into the untracked `.claude/settings.local.json`. The tested flows used `--scope local`; project scope is untested.
 3. Trust the project: open it interactively once and accept the trust dialog, so the project-shared `.claude/settings.json` rules apply. In `-p` the project-shared rules are ignored (measured); after the trust dialog they are expected to apply, which is untested.
 4. Allow the plugin's files and tools. Run `agentic-verify-project --print-rules` (it only prints) and merge the printed `permissions.allow` entries into `.claude/settings.local.json`; the CLI has already created that file, so do not paste over it. Or approve the permission prompts with "don't ask again" (interactive; untested). Verified (local, `-p`): the Read rule and the `agentic-verify-project` and `agentic-work-issue` rules. Untested: the other four shim rules, interactive "don't ask again", project-scope install and the trust dialog. Re-run `--print-rules` after any plugin update: the Read rule contains the install path of that version. See "Permissions for plugin files".
-5. Run `/agentic:verify-project` to check readiness. It also reports `project_pin` (the `ref` of the `agentic-harness` marketplace in `.claude/settings.json` or `.claude/settings.local.json`) and `pin_status` (`tag-match`, `tag-mismatch`, `sha-or-branch` or `absent`), informational only; it never changes the exit code. `--inventory [--project DIR]` is a read-only mode for a project not yet adopted: it needs only a Git root and reports which entry files exist, plugin-owned copies and the pin.
+5. Run `/agentic:verify-project` to check readiness. It compares the running version with what the project enables (Claude: `.claude/settings.json` plus `settings.local.json`; Codex, with `--coordinator codex`: `.codex/config.toml`) and reports `expected_marketplace`, `enabled_marketplaces`, `project_pin` (the declared `ref`) and `pin_status`. `tag-match`, `name-match`, `sha-or-branch` and `absent` (nothing enabled by the project) pass; `version-mismatch`, `tag-mismatch` and `multiple-enabled` block with exit code 2. It reads project files only: a version enabled in user-level settings is not seen. `--inventory [--project DIR]` is a read-only mode for a project not yet adopted: it needs only a Git root, reports the same pin fields (Claude files) and never blocks on them.
 6. Run `/agentic:init-project` for a new project, or `/agentic:adopt-project` for an existing one (adoption first runs the read-only `verify-project.py --inventory`, which works before the project has `AGENTS.md`, `CLAUDE.md` or `specs/project-rules.md`; step 5's default mode needs them).
 
 These steps are Claude Code's; for the Codex and Antigravity install commands as measured, see [Clients](#clients-v1-targets-observed).
@@ -20,6 +22,31 @@ Nothing common is copied into the project: skills, roles, methodology, templates
 This implements [SPEC #77](https://github.com/jmartinlabs/agent-project-template/issues/77#issuecomment-7165024336): the plugin `agentic` centralizes the common harness capabilities so that a project keeps only its context, configuration, rules and application files. It packages the operating core below plus a read-only readiness Skill and diagnostic script. It does not replace an existing harness. Licensed under the MIT licence (`LICENSE`, holder jmartinlabs, 2026).
 
 `methodology/approvals.md` is the canonical approvals source; where it mentions `orchestrate`, it refers to the `orchestrate` Skill in this package.
+
+## Versions per project
+
+The marketplace name carries the version because both clients keep one source per marketplace name for the whole user: with a shared name, `plugin update` in one project moved it to another project's version ([#2](https://github.com/jmartinlabs/agentic-harness-plugin/issues/2)). A local alias in the settings is rejected by both clients; the name comes from the release.
+
+**Claude Code, change one project from A to B** (also the rollback), inside that project, with the same `--scope` used to install:
+
+```sh
+claude plugin marketplace add jmartinlabs/agentic-harness-plugin#vB --scope local
+claude plugin install agentic@agentic-harness-B --scope local
+claude plugin uninstall agentic@agentic-harness-A --scope local
+```
+
+Uninstall the old one: until then the project loads **both**. Then update the committed `.claude/settings.json` (marketplace name, `ref` and `enabledPlugins` key) and remove the leftover marketplace entry. `claude plugin update` does not change versions: each marketplace is pinned to its tag. Permission rules contain the install path, so run `--print-rules` again.
+
+**Codex:** `codex plugin marketplace add jmartinlabs/agentic-harness-plugin --ref vX.Y.Z`, then `codex plugin add agentic@agentic-harness-X-Y-Z`. `plugin add` enables the plugin for **every** project of the user. Set `enabled = false` for each `agentic@agentic-harness-*` table in the user `config.toml`, and enable one per project in its `.codex/config.toml`:
+
+```toml
+[plugins."agentic@agentic-harness-X-Y-Z"]
+enabled = true
+```
+
+Codex applies the project file only to trusted projects (documented; **not verified** here). Verified: per-session selection with `-c plugins.agentic@agentic-harness-X-Y-Z.enabled=true`. Check with `verify-project.py --coordinator codex` from the loaded version.
+
+Antigravity has no pin (installs a branch, globally); nothing here isolates it.
 
 ## Evidence scope
 

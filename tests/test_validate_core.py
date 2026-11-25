@@ -179,6 +179,16 @@ class PluginCase(unittest.TestCase):
         path.write_text(json.dumps(data))
         self.assertRule(root, "manifest")
 
+    def test_marketplace_name_must_carry_the_version(self):
+        for relative in (".claude-plugin/marketplace.json", ".agents/plugins/marketplace.json"):
+            with self.subTest(path=relative):
+                root = self.fixture()
+                path = root / relative
+                data = json.loads(path.read_text())
+                data["name"] = "agentic-harness"
+                path.write_text(json.dumps(data))
+                self.assertRule(root, "manifest")
+
     def test_missing_license_is_detected(self):
         root = self.fixture()
         (root / "LICENSE").unlink()

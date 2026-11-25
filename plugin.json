@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "agentic",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Agentic Harness plugin: shared skills, methodology, roles and tools for agent-driven projects.",
   "license": "MIT"
 }

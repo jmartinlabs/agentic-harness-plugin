@@ -198,17 +198,18 @@ class PilotBoundaryTests(unittest.TestCase):
         (a / ".claude/agents/qa-review.md").write_text("local copy", encoding="utf-8")
         (a / "specs/methodology").mkdir()
         (a / ".codex").mkdir()
+        (a / ".codex/hooks.json").write_text("{}", encoding="utf-8")
         (a / "templates").mkdir()
         (a / "templates/own-notes.md").write_text("project file", encoding="utf-8")
         result = self.invoke(a)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)["plugin_owned_paths_in_project"],
-                         [".claude/agents", ".codex", "specs/methodology"])
+                         [".claude/agents", ".codex/hooks.json", "specs/methodology"])
         (a / "templates/issue.md").write_text("local copy", encoding="utf-8")
         result = self.invoke(a)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)["plugin_owned_paths_in_project"],
-                         [".claude/agents", ".codex", "specs/methodology", "templates"])
+                         [".claude/agents", ".codex/hooks.json", "specs/methodology", "templates"])
 
     def test_print_rules_prints_json_and_writes_nothing(self):
         project = self.projects / "a"
@@ -234,35 +235,85 @@ class PilotBoundaryTests(unittest.TestCase):
         self.assertEqual(report["artifact_read_rule_hint"], f"Read(/{report['artifact_root']}/**)")
         self.assertTrue(report["artifact_read_rule_hint"].startswith("Read(//"))
 
-    def pin_report(self, version_ref, local=False):
-        project = self.projects / "a"
-        (project / ".claude").mkdir(exist_ok=True)
-        if version_ref is not None:
-            settings = {"extraKnownMarketplaces": {"agentic-harness": {"source": {
-                "source": "github", "repo": "jmartinlabs/agentic-harness-plugin", "ref": version_ref}}}}
-            name = "settings.local.json" if local else "settings.json"
-            (project / ".claude" / name).write_text(json.dumps(settings))
-        result = self.invoke(project)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        return json.loads(result.stdout)
+    def settings(self, enabled, refs=None, name="settings.json"):
+        folder = self.projects / "a/.claude"
+        folder.mkdir(exist_ok=True)
+        markets = {market: {"source": {"source": "github", "repo": "jmartinlabs/agentic-harness-plugin",
+                                       "ref": ref}} for market, ref in (refs or {}).items()}
+        (folder / name).write_text(json.dumps({
+            "enabledPlugins": {f"agentic@{market}": on for market, on in enabled.items()},
+            "extraKnownMarketplaces": markets}))
 
-    def test_pin_status_four_cases_and_exit_code_unchanged(self):
+    def codex_config(self, enabled):
+        folder = self.projects / "a/.codex"
+        folder.mkdir(exist_ok=True)
+        (folder / "config.toml").write_text("".join(
+            f'[plugins."agentic@{market}"]\nenabled = {str(on).lower()}  # pin\n' for market, on in enabled.items()))
+
+    def check(self, status, code, *arguments):
+        result = self.invoke(self.projects / "a", *arguments)
+        self.assertEqual(result.returncode, code, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertEqual(report["pin_status"], status)
+        if code:
+            self.assertIn("readiness blocked", result.stderr)
+        return report
+
+    def current(self):
         version = json.loads((ROOT / "plugin.json").read_text())["version"]
-        for ref, local, status in ((f"v{version}", False, "tag-match"), ("v0.0.1", True, "tag-mismatch"),
-                                   ("a" * 40, False, "sha-or-branch"), ("main", True, "sha-or-branch"),
-                                   (None, False, "absent")):
-            with self.subTest(ref=ref):
-                report = self.pin_report(ref, local)
-                self.assertEqual((report["project_pin"], report["pin_status"]), (ref, status))
-                self.assertEqual(report["artifact_version"], version)
-                shutil.rmtree(self.projects / "a/.claude")
+        return version, "agentic-harness-" + version.replace(".", "-")
 
-    def test_pin_status_ignores_malformed_settings(self):
-        project = self.projects / "a"
-        (project / ".claude").mkdir()
-        (project / ".claude/settings.json").write_text("{not json")
-        report = self.pin_report(None)
-        self.assertEqual((report["project_pin"], report["pin_status"]), (None, "absent"))
+    def test_pin_matches_the_loaded_version(self):
+        version, name = self.current()
+        for ref, status in ((f"v{version}", "tag-match"), ("a" * 40, "sha-or-branch"), (None, "name-match")):
+            with self.subTest(ref=ref):
+                self.settings({name: True}, {name: ref} if ref else {})
+                report = self.check(status, 0, "--coordinator", "claude")
+                self.assertEqual((report["project_pin"], report["expected_marketplace"]), (ref, name))
+                self.assertEqual(report["artifact_version"], version)
+
+    def test_other_version_or_legacy_name_blocks(self):
+        for market in ("agentic-harness-0-0-1", "agentic-harness"):
+            with self.subTest(market=market):
+                self.settings({market: True}, {market: "v0.0.1"})
+                self.check("version-mismatch", 2)
+
+    def test_ref_that_contradicts_the_name_blocks(self):
+        name = self.current()[1]
+        self.settings({name: True}, {name: "v0.0.1"})
+        self.check("tag-mismatch", 2)
+
+    def test_two_enabled_versions_block_even_across_settings_files(self):
+        name = self.current()[1]
+        self.settings({name: True})
+        self.settings({"agentic-harness-0-0-1": True}, name="settings.local.json")
+        self.check("multiple-enabled", 2)
+
+    def test_local_settings_can_disable_a_shared_entry_and_leftover_marketplaces_are_ignored(self):
+        version, name = self.current()
+        self.settings({name: True, "agentic-harness-0-0-1": True},
+                      {name: f"v{version}", "agentic-harness-0-0-1": "v0.0.1"})
+        self.settings({"agentic-harness-0-0-1": False}, name="settings.local.json")
+        self.check("tag-match", 0)
+
+    def test_nothing_enabled_or_malformed_settings_is_absent(self):
+        self.check("absent", 0)
+        self.settings({}, {"agentic-harness-0-0-1": "v0.0.1"})
+        self.check("absent", 0)
+        (self.projects / "a/.claude/settings.json").write_text("{not json")
+        self.check("absent", 0)
+
+    def test_codex_reads_its_own_project_configuration(self):
+        name = self.current()[1]
+        self.settings({"agentic-harness-0-0-1": True})
+        self.check("absent", 0, "--coordinator", "codex")
+        self.codex_config({name: True, "agentic-harness-0-0-1": False})
+        report = self.check("name-match", 0, "--coordinator", "codex")
+        self.assertNotIn(".codex/hooks.json", report["plugin_owned_paths_in_project"])
+        self.codex_config({"agentic-harness-0-0-1": True})
+        self.check("version-mismatch", 2, "--coordinator", "codex")
+        self.codex_config({name: True, "agentic-harness-0-0-1": True})
+        self.check("multiple-enabled", 2, "--coordinator", "codex")
 
     def test_inventory_mode(self):
         empty = self.sandbox / "empty"

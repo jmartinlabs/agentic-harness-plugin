@@ -1,5 +1,5 @@
 {
-  "name": "agentic-harness",
+  "name": "agentic-harness-1-1-0",
   "interface": { "displayName": "Agentic Harness" },
   "plugins": [
     {

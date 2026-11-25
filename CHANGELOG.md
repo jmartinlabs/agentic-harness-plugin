@@ -2,6 +2,17 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/), see [RELEASING.md](RELEASING.md).
 
+## [1.1.0] - unreleased
+
+Merge, tag and release need the owner's explicit approval.
+
+### Changed
+- Marketplace name carries the version (`agentic-harness-1-1-0`) so that projects on different versions install, update and roll back independently ([#2](https://github.com/jmartinlabs/agentic-harness-plugin/issues/2)). Projects change the marketplace name, `ref` and `enabledPlugins` key together. The plugin name and the `/agentic:*` skills do not change.
+- `verify-project` blocks (exit 2) when the running version is not the one the project enables (`version-mismatch`, `tag-mismatch`) or when two are enabled (`multiple-enabled`); it also reads `.codex/config.toml`. `.codex/config.toml` is no longer reported as a plugin-owned copy (`.codex/hooks.json` still is).
+
+### Fixed
+- `validate-core` checks that both marketplace names match the version.
+
 ## [1.0.0] - 2026-11-25
 
 First release candidate. Merge, tag and release need the owner's explicit approval; none has been done.
