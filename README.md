@@ -1,6 +1,8 @@
 # Agentic Harness · pilot candidate
 
-This is the first vertical candidate for [SPEC #77](https://github.com/jmartinlabs/agent-project-template/issues/77#issuecomment-7165024336). It packages one read-only project readiness Skill, the approvals methodology, a canonical QA role and a diagnostic script. The pilot does not replace an existing harness.
+This is the first vertical candidate for [SPEC #77](https://github.com/jmartinlabs/agent-project-template/issues/77#issuecomment-7165024336). It packages one read-only project readiness Skill, the approvals methodology, a canonical QA role and a diagnostic script. The pilot does not replace an existing harness. Licensed under the MIT licence (`LICENSE`, holder jmartinlabs, 2026).
+
+`orchestrate` is not part of this candidate. `methodology/approvals.md` is the canonical approvals source; where it mentions `orchestrate`, it refers to the template's orchestrate Skill, which the pilot does not ship.
 
 Use Python 3.10 or later for the portable, local checks:
 
@@ -13,11 +15,28 @@ The script inspects readiness and reports paths. It locates exactly the selected
 
 ## Package paths and evidence
 
-| Candidate surface | Packaging reference | Current evidence |
-| --- | --- | --- |
-| Claude Code | [Plugin guide](https://code.claude.com/docs/en/plugins), `.claude-plugin/plugin.json` | Manifest and common Skill present. Installed discovery, direct invocation and native independent QA experiment unrun. |
-| Codex | [Portable packaging guide](https://developers.openai.com/plugins/build/plugins), root `plugin.json` | Manifest and common Skill present. Desktop installation, effective revision and live dispatch unrun. |
-| Antigravity | [Plugins guide](https://antigravity.google/docs/plugins), `.antigravity-plugin/plugin.json` | Manifest and common Skill present. App/CLI loading, per-project version isolation and native mode unrun. |
+Status below is local and synthetic only. Sources are comments on [issue #77](https://github.com/jmartinlabs/agent-project-template/issues/77): 7165742456, 7166402182, 7166905791, 7167550781, 7167784394, 7167801822. Cited comments are the owner's record; this README does not restate their raw output.
+
+| Candidate surface | Packaging reference | Status | Current evidence |
+| --- | --- | --- | --- |
+| Claude Code | [Plugin guide](https://code.claude.com/docs/en/plugins), `.claude-plugin/plugin.json` | Partial | Verified: `claude plugin validate . --strict` passes (client 2.1.330, local and CI). Observed in the issue comments above: marketplace and plugin behaviour listed under Known limitations. Unrun: native independent QA experiment, effective model/effort. |
+| Codex | [Portable packaging guide](https://developers.openai.com/plugins/build/plugins), root `plugin.json` | Partial | Manifest and common Skill present and covered by local tests. Quota-gated Codex tests unrun; desktop installation, effective revision and live dispatch unrun. |
+| Antigravity | [Plugins guide](https://antigravity.google/docs/plugins), `.antigravity-plugin/plugin.json` | Partial | Manifest and common Skill present. Isolation observed per-workspace copies only. Per-project version isolation and native mode unrun. |
+| Local checks | `tests/test_pilot.py`, `.github/workflows/validate.yml` | Verified (local synthetic) | Unittest suite (stdlib only), Python 3.10 and 3.12 in CI, pinned strict Claude validation in CI. CI results are not claimed until a run exists. |
+
+## Known limitations (observed)
+
+Observed in the cited experiments; each is a limitation to design around, not a guarantee.
+
+- The same plugin name from two marketplaces is a silent first-wins. This is unsafe.
+- A plugin enabled in project settings but not installed loads nothing and warns nothing (fails open).
+- A profile-level marketplace name wins over a project's `extraKnownMarketplaces`.
+- Claude Code pins by the marketplace entry `sha` (git sources). Local-path marketplaces load in place from the source directory, not from the cache.
+- There is no rollback command.
+- Antigravity isolation was observed only as per-workspace copies.
+- Hooks and instructions are not enforcement.
+- Effective model/effort selection is unverified.
+- Codex quota-gated tests are unrun.
 
 OpenCode and Hermes belong to a later increment. No runtime or v2 profile support is claimed. No hook, MCP tool or native agent definition is required for this diagnostic. For the pilot's separate QA experiment, pass the canonical role through the existing bounded native work packet where supported. No hook or existing behavior in the upstream template is removed.
 
