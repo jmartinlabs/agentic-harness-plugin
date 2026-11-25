@@ -17,26 +17,32 @@ The script inspects readiness and reports paths. It locates exactly the selected
 
 Status below is local and synthetic only. Sources are comments on [issue #77](https://github.com/jmartinlabs/agent-project-template/issues/77): 7165742456, 7166402182, 7166905791, 7167550781, 7167784394, 7167801822. Cited comments are the owner's record; this README does not restate their raw output.
 
-| Candidate surface | Packaging reference | Status | Current evidence |
+| Candidate surface | Packaging reference | Status | Current evidence (local, synthetic) |
 | --- | --- | --- | --- |
-| Claude Code | [Plugin guide](https://code.claude.com/docs/en/plugins), `.claude-plugin/plugin.json` | Partial | Verified: `claude plugin validate . --strict` passes (client 2.1.330, local and CI). Observed in the issue comments above: marketplace and plugin behaviour listed under Known limitations. Unrun: native independent QA experiment, effective model/effort. |
-| Codex | [Portable packaging guide](https://developers.openai.com/plugins/build/plugins), root `plugin.json` | Partial | Manifest and common Skill present and covered by local tests. Quota-gated Codex tests unrun; desktop installation, effective revision and live dispatch unrun. |
-| Antigravity | [Plugins guide](https://antigravity.google/docs/plugins), `.antigravity-plugin/plugin.json` | Partial | Manifest and common Skill present. Isolation observed per-workspace copies only. Per-project version isolation and native mode unrun. |
-| Local checks | `tests/test_pilot.py`, `.github/workflows/validate.yml` | Verified (local synthetic) | Unittest suite (stdlib only), Python 3.10 and 3.12 in CI, pinned strict Claude validation in CI. CI results are not claimed until a run exists. |
+| Claude Code 2.1.330 | [Plugin guide](https://code.claude.com/docs/en/plugins), `.claude-plugin/plugin.json` | Partial | Verified: `claude plugin validate . --strict` passes locally only; the CI job has not run yet. Verified in traces: install from cache by git `url`+`sha` plugin source (a `file://` plugin source inside a directory marketplace; adding a git `file://` marketplace is rejected as `invalid_source`); update and rollback by changing the catalog `sha` and running `plugin update`; different versions per project in one profile with local-scope installs; negative N2 (a bad `sha` fails and the installed version stays loadable) and N3 (invalid manifests fail validate). Invocation and synthetic child delegation observed. Plugin-agent permissions: see below. Unrun: effective model/effort. |
+| Codex 0.172.0 | [Portable packaging guide](https://developers.openai.com/plugins/build/plugins), root `plugin.json` | Partial | Verified: A/B install, update and rollback with per-project versions and rules, loaded from the profile cache. Observed: invocation and synthetic child delegation (`parent_thread_id`, depth 1). Unrun (quota-gated, not run by decision): explicit v2 model/effort, negative rules, effective child permissions. |
+| Antigravity 1.5.17 | [Plugins guide](https://antigravity.google/docs/plugins), `.antigravity-plugin/plugin.json` | Partial | Verified: isolated authentication (API key and OAuth in a temporary profile; habitual state unchanged), discovery, and invocation with correct version, roots and project rule; an unrelated workspace reports "SKILL NO DISPONIBLE". Scope is per-workspace copies, isolated by construction; no shared install, update or rollback was exercised. Model is only requested/accepted. Prompts named the Skill. |
+| Local checks | `tests/test_pilot.py`, `.github/workflows/validate.yml` | Verified (local synthetic) | Unittest suite (stdlib only). The CI job (Python 3.10 and 3.12, pinned strict Claude validation) has never run. |
 
 ## Known limitations (observed)
 
 Observed in the cited experiments; each is a limitation to design around, not a guarantee.
 
-- The same plugin name from two marketplaces is a silent first-wins. This is unsafe.
+- N1: the same plugin name from two marketplaces is a silent first-wins. This is unsafe. The evidence rests on the model's statement of the path, not a tool event.
 - A plugin enabled in project settings but not installed loads nothing and warns nothing (fails open).
-- A profile-level marketplace name wins over a project's `extraKnownMarketplaces`.
-- Claude Code pins by the marketplace entry `sha` (git sources). Local-path marketplaces load in place from the source directory, not from the cache.
-- There is no rollback command.
-- Antigravity isolation was observed only as per-workspace copies.
-- Hooks and instructions are not enforcement.
-- Effective model/effort selection is unverified.
-- Codex quota-gated tests are unrun.
+- Side findings, not independently reproduced: a profile-level marketplace name wins over a project's `extraKnownMarketplaces`; `plugin uninstall` empties the project `enabledPlugins`.
+- Claude Code pins by the marketplace entry `sha` (git sources). Local-path marketplaces load in place from the source directory, not the cache.
+- Rollback was done by re-pinning the catalog `sha` and `plugin update`, or by uninstall and reinstall. No dedicated rollback command was found in the docs read.
+- Antigravity isolation was per-workspace copies only. `--strict` validation of the Antigravity manifest warns about precedence against the shared root manifest.
+- The Antigravity test harness allowed `BypassSandbox:true` because its regex checked only `CommandLine`. This is a harness lesson, not a product finding.
+- Claude's first invocation had Bash denied when the permission path did not match the runtime's local origin.
+- The published https/GitHub channel and private marketplaces are unrun.
+- Hooks and instructions are not enforcement. N4 (a project rule relaxing a gate) is a weak, prompted observation, not enforcement.
+- Effective model/effort selection is unverified (only requested/accepted). Codex quota-gated tests are unrun.
+
+### Subagent permissions (observed, Claude Code 2.1.330, local synthetic)
+
+Independently QA'd; local synthetic, 5 sessions. The plugin agent loads as `agentic:<name>` and the child's self-reported tools matched its `tools` list. Frontmatter `hooks` and `permissionMode: bypassPermissions` had no observable effect, but no restricted action was attempted, so "ignored" is the docs' statement and was not exercised. "Child tools are the intersection with the parent's tools" is inferred, with no negative control. A child's file-writing Bash redirection was blocked in a `-p` non-interactive run in default permission mode with no approver ("needs approval and none was available"), not an unconditional deny; a read-only `pwd` ran. The qa-review "read-only" refusals were model compliance (instruction-only), because Bash is in the agent's tools. Not measured: behaviour with Bash pre-approved, `acceptEdits` or bypass on the parent; whether hooks/`permissionMode` are honoured when a restricted action is attempted; any negative control for tools outside the child's list; effective model/effort. Run flags for two of the probes are not recorded in the trace. The template's qa-review adapter reads `.agents/roles/qa-review.md` relative to the project; a plugin distribution must point to the plugin copy.
 
 OpenCode and Hermes belong to a later increment. No runtime or v2 profile support is claimed. No hook, MCP tool or native agent definition is required for this diagnostic. For the pilot's separate QA experiment, pass the canonical role through the existing bounded native work packet where supported. No hook or existing behavior in the upstream template is removed.
 

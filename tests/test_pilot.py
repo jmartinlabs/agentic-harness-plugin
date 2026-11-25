@@ -142,13 +142,20 @@ class PilotBoundaryTests(unittest.TestCase):
         self.assertIn("readiness blocked", result.stderr)
 
     def test_git_entry_as_file_marks_the_root(self):
-        a = self.projects / "a"
-        (a / ".git").write_text("gitdir: elsewhere\n", encoding="utf-8")
-        nested = a / "nested"
-        nested.mkdir()
+        root = self.sandbox / "gitfile"
+        nested = root / "nested"
+        nested.mkdir(parents=True)
+        (root / ".git").write_text("gitdir: elsewhere\n", encoding="utf-8")
+        for entry in ("AGENTS.md", "CLAUDE.md"):
+            (root / entry).write_text("root", encoding="utf-8")
+        (root / "specs").mkdir()
+        (root / "specs/project-rules.md").write_text("rules", encoding="utf-8")
+        # Decoy markers: only the .git file boundary makes the outer root win.
+        for entry in ("AGENTS.md", "CLAUDE.md"):
+            (nested / entry).write_text("decoy", encoding="utf-8")
         result = self.invoke(nested)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(json.loads(result.stdout)["project_root"], str(a))
+        self.assertEqual(json.loads(result.stdout)["project_root"], str(root))
 
     def test_symlinked_config_candidate_outside_root_is_rejected(self):
         a = self.projects / "a"
