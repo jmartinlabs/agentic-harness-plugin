@@ -5,6 +5,7 @@ import os
 import re
 import runpy
 import subprocess
+import sys
 import unittest
 from collections import Counter
 from pathlib import Path
@@ -128,19 +129,25 @@ class PathTests(unittest.TestCase):
 
 
 class HookTests(unittest.TestCase):
-    def test_hook_prints_one_plugin_file_within_budget(self):
-        config = json.loads((ROOT / "hooks/hooks.json").read_text(encoding="utf-8"))
-        self.assertEqual(list(config), ["hooks"])
-        self.assertEqual(list(config["hooks"]), ["SessionStart"])
-        (group,) = config["hooks"]["SessionStart"]
-        (hook,) = group["hooks"]
-        self.assertEqual(hook["type"], "command")
-        match = re.fullmatch(r'cat "\$\{CLAUDE_PLUGIN_ROOT\}/(skills/orchestrate/SKILL\.md)" 2>/dev/null \|\| true',
-                             hook["command"])
-        self.assertIsNotNone(match, hook["command"])
-        printed = ROOT / match.group(1)
-        self.assertTrue(printed.is_file())
-        self.assertLessEqual(printed.stat().st_size, HOOK_PRINT_BUDGET)
+    def test_session_start_reports_the_artifact_version_and_preserves_claude_context(self):
+        version = json.loads((ROOT / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))["version"]
+        script = ROOT / "hooks/session-start.py"
+        for arguments in ([], ["--claude"]):
+            with self.subTest(arguments=arguments):
+                result = subprocess.run(
+                    [sys.executable, str(script), *arguments], cwd=ROOT.parent,
+                    capture_output=True, check=True, text=True,
+                )
+                report = json.loads(result.stdout)
+                self.assertEqual(report["systemMessage"], f"Agentic Harness {version}")
+                if arguments:
+                    output = report["hookSpecificOutput"]
+                    self.assertEqual(output["hookEventName"], "SessionStart")
+                    context = output["additionalContext"]
+                    self.assertEqual(context, (ROOT / "skills/orchestrate/SKILL.md").read_text(encoding="utf-8"))
+                    self.assertLessEqual(len(context.encode("utf-8")), HOOK_PRINT_BUDGET)
+                else:
+                    self.assertEqual(list(report), ["systemMessage"])
 
 
 class FrontmatterTests(unittest.TestCase):

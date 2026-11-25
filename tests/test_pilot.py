@@ -20,7 +20,8 @@ class PilotTests(unittest.TestCase):
         self.bundle.mkdir()
         for name in ("scripts", "methodology", "roles", "skills", "templates"):
             shutil.copytree(ROOT / name, self.bundle / name)
-        shutil.copyfile(ROOT / "plugin.json", self.bundle / "plugin.json")
+        for manifest_dir in (".claude-plugin", ".codex-plugin", ".antigravity-plugin"):
+            shutil.copytree(ROOT / manifest_dir, self.bundle / manifest_dir)
         self.projects = self.sandbox / "projects"
         shutil.copytree(FIXTURES, self.projects)
 
@@ -32,14 +33,14 @@ class PilotTests(unittest.TestCase):
 
     def test_manifest_identity_and_portable_skill(self):
         manifests = [json.loads((ROOT / path).read_text()) for path in (
-            "plugin.json", ".claude-plugin/plugin.json", ".antigravity-plugin/plugin.json",
+            ".codex-plugin/plugin.json", ".claude-plugin/plugin.json", ".antigravity-plugin/plugin.json",
         )]
         self.assertEqual({item["name"] for item in manifests}, {"agentic"})
         self.assertEqual(len({item["version"] for item in manifests}), 1)
         for manifest in manifests:
             self.assertRegex(manifest["version"], r"^\d+\.\d+\.\d+$")
             self.assertTrue(manifest["description"].strip())
-        self.assertEqual(manifests[0]["$schema"], "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json")
+        self.assertEqual(manifests[0]["hooks"], "./hooks/codex.json")
         self.assertTrue(manifests[1]["author"]["name"].strip())
         self.assertEqual(manifests[2]["$schema"], "https://antigravity.google/schemas/v1/plugin.json")
         self.assertTrue(manifests[2]["displayName"].strip())
@@ -235,86 +236,6 @@ class PilotBoundaryTests(unittest.TestCase):
         self.assertEqual(report["artifact_read_rule_hint"], f"Read(/{report['artifact_root']}/**)")
         self.assertTrue(report["artifact_read_rule_hint"].startswith("Read(//"))
 
-    def settings(self, enabled, refs=None, name="settings.json"):
-        folder = self.projects / "a/.claude"
-        folder.mkdir(exist_ok=True)
-        markets = {market: {"source": {"source": "github", "repo": "jmartinlabs/agentic-harness-plugin",
-                                       "ref": ref}} for market, ref in (refs or {}).items()}
-        (folder / name).write_text(json.dumps({
-            "enabledPlugins": {f"agentic@{market}": on for market, on in enabled.items()},
-            "extraKnownMarketplaces": markets}))
-
-    def codex_config(self, enabled):
-        folder = self.projects / "a/.codex"
-        folder.mkdir(exist_ok=True)
-        (folder / "config.toml").write_text("".join(
-            f'[plugins."agentic@{market}"]\nenabled = {str(on).lower()}  # pin\n' for market, on in enabled.items()))
-
-    def check(self, status, code, *arguments):
-        result = self.invoke(self.projects / "a", *arguments)
-        self.assertEqual(result.returncode, code, result.stderr)
-        report = json.loads(result.stdout)
-        self.assertEqual(report["pin_status"], status)
-        if code:
-            self.assertIn("readiness blocked", result.stderr)
-        return report
-
-    def current(self):
-        version = json.loads((ROOT / "plugin.json").read_text())["version"]
-        return version, "agentic-harness-" + version.replace(".", "-")
-
-    def test_pin_matches_the_loaded_version(self):
-        version, name = self.current()
-        for ref, status in ((f"v{version}", "tag-match"), ("a" * 40, "sha-or-branch"), (None, "name-match")):
-            with self.subTest(ref=ref):
-                self.settings({name: True}, {name: ref} if ref else {})
-                report = self.check(status, 0, "--coordinator", "claude")
-                self.assertEqual((report["project_pin"], report["expected_marketplace"]), (ref, name))
-                self.assertEqual(report["artifact_version"], version)
-
-    def test_other_version_or_legacy_name_blocks(self):
-        for market in ("agentic-harness-0-0-1", "agentic-harness"):
-            with self.subTest(market=market):
-                self.settings({market: True}, {market: "v0.0.1"})
-                self.check("version-mismatch", 2)
-
-    def test_ref_that_contradicts_the_name_blocks(self):
-        name = self.current()[1]
-        self.settings({name: True}, {name: "v0.0.1"})
-        self.check("tag-mismatch", 2)
-
-    def test_two_enabled_versions_block_even_across_settings_files(self):
-        name = self.current()[1]
-        self.settings({name: True})
-        self.settings({"agentic-harness-0-0-1": True}, name="settings.local.json")
-        self.check("multiple-enabled", 2)
-
-    def test_local_settings_can_disable_a_shared_entry_and_leftover_marketplaces_are_ignored(self):
-        version, name = self.current()
-        self.settings({name: True, "agentic-harness-0-0-1": True},
-                      {name: f"v{version}", "agentic-harness-0-0-1": "v0.0.1"})
-        self.settings({"agentic-harness-0-0-1": False}, name="settings.local.json")
-        self.check("tag-match", 0)
-
-    def test_nothing_enabled_or_malformed_settings_is_absent(self):
-        self.check("absent", 0)
-        self.settings({}, {"agentic-harness-0-0-1": "v0.0.1"})
-        self.check("absent", 0)
-        (self.projects / "a/.claude/settings.json").write_text("{not json")
-        self.check("absent", 0)
-
-    def test_codex_reads_its_own_project_configuration(self):
-        name = self.current()[1]
-        self.settings({"agentic-harness-0-0-1": True})
-        self.check("absent", 0, "--coordinator", "codex")
-        self.codex_config({name: True, "agentic-harness-0-0-1": False})
-        report = self.check("name-match", 0, "--coordinator", "codex")
-        self.assertNotIn(".codex/hooks.json", report["plugin_owned_paths_in_project"])
-        self.codex_config({"agentic-harness-0-0-1": True})
-        self.check("version-mismatch", 2, "--coordinator", "codex")
-        self.codex_config({name: True, "agentic-harness-0-0-1": True})
-        self.check("multiple-enabled", 2, "--coordinator", "codex")
-
     def test_inventory_mode(self):
         empty = self.sandbox / "empty"
         empty.mkdir()
@@ -325,7 +246,6 @@ class PilotBoundaryTests(unittest.TestCase):
         self.assertEqual(report["project_root"], str(empty.resolve()))
         self.assertEqual(report["entry_files"], {"AGENTS.md": False, "CLAUDE.md": False, "specs/project-rules.md": False})
         self.assertEqual(report["plugin_owned_paths_in_project"], [])
-        self.assertEqual(report["pin_status"], "absent")
         self.assertEqual(self.invoke(empty).returncode, 2)  # default mode still blocks
         (empty / ".claude/skills").mkdir(parents=True)
         (empty / "AGENTS.md").write_text("x")
@@ -347,7 +267,7 @@ class PilotBoundaryTests(unittest.TestCase):
         text = (ROOT / "LICENSE").read_text(encoding="utf-8")
         self.assertTrue(text.startswith("MIT License\n"))
         self.assertIn("Copyright (c) 2026 jmartinlabs", text)
-        for path in ("plugin.json", ".claude-plugin/plugin.json", ".antigravity-plugin/plugin.json"):
+        for path in (".codex-plugin/plugin.json", ".claude-plugin/plugin.json", ".antigravity-plugin/plugin.json"):
             with self.subTest(path=path):
                 self.assertEqual(json.loads((ROOT / path).read_text())["license"], "MIT")
 
