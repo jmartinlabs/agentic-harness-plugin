@@ -38,7 +38,7 @@ jobs:
         with:
           node-version: '22'
       # The npm install runs the package's install.cjs (read-only token, no secrets).
-      # No lockfile pins transitive packages. This job has never run.
+      # No lockfile pins transitive packages. First green run: 45656722504 at 2dc8015.
       - name: Install the pinned Claude Code client outside the repository
         run: |
           mkdir "$RUNNER_TEMP/claude-client"
