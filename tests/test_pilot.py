@@ -35,14 +35,22 @@ class PilotTests(unittest.TestCase):
         )]
         self.assertEqual({item["name"] for item in manifests}, {"agentic"})
         self.assertEqual(len({item["version"] for item in manifests}), 1)
+        for manifest in manifests:
+            self.assertRegex(manifest["version"], r"^\d+\.\d+\.\d+$")
+            self.assertTrue(manifest["description"].strip())
+        self.assertEqual(manifests[0]["$schema"], "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json")
+        self.assertTrue(manifests[1]["author"]["name"].strip())
+        self.assertEqual(manifests[2]["$schema"], "https://antigravity.google/schemas/v1/plugin.json")
+        self.assertTrue(manifests[2]["displayName"].strip())
         self.assertTrue((self.bundle / "skills/verify-project/SKILL.md").is_file())
 
     def test_marketplaces_target_the_same_packaged_root(self):
         claude = json.loads((ROOT / ".claude-plugin/marketplace.json").read_text())
         codex = json.loads((ROOT / ".agents/plugins/marketplace.json").read_text())
+        self.assertEqual(codex["plugins"][0]["source"]["source"], "local")
         for market, source in ((claude, claude["plugins"][0]["source"]),
                                (codex, codex["plugins"][0]["source"]["path"])):
-            self.assertEqual(market["plugins"][0]["name"], "agentic")
+            self.assertEqual([entry["name"] for entry in market["plugins"]], ["agentic"])
             self.assertEqual((ROOT / source).resolve(), ROOT)
 
     def test_readiness_uses_different_roots_and_single_config_candidate(self):
