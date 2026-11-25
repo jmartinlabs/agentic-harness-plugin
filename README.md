@@ -50,7 +50,7 @@ Both marketplace descriptors target the same package at the repository root: `.c
 
 ## GitHub distribution channel (observed)
 
-Observed with Claude Code 2.1.330, local scope, one temporary profile on one machine, against the public repository `jmartinlabs/agentic-harness-plugin`. Evidence files are in the coordinator's channel rerun (`01`-`23`, cited by number). Nothing here is a release: no tags and no releases exist, and no merge is made. `pilot/version-0.1.1` (head `1deaeca7a547a281c86f31960ae538b4a2114f7e`, base `506e52bf0530252ca8a4e0ac8cdc9a4e328758c7`) is a temporary test branch kept until the owner authorizes its deletion.
+Observed with Claude Code 2.1.330, local scope, one temporary profile on one machine, against the public repository `jmartinlabs/agentic-harness-plugin`. The raw logs and traces are local evidence retained by the coordinator, not part of this repository; file numbers cited below refer to that local set. Nothing here is a release: no tags and no releases exist, and no merge is made. `pilot/version-0.1.1` (head `1deaeca7a547a281c86f31960ae538b4a2114f7e`, base `506e52bf0530252ca8a4e0ac8cdc9a4e328758c7`) is a temporary test branch kept until the owner authorizes its deletion.
 
 - Add: `claude plugin marketplace add jmartinlabs/agentic-harness-plugin#<branch>` and `...#<40-hex sha>` both work (04, 08, 12).
 - Install and version: the plugin loads from `<profile>/plugins/cache/<marketplace>/agentic/<version>` and `installed_plugins.json` records `gitCommitSha`. `506e52b...` gives 0.1.0 (05, 06); `1deaeca...` gives 0.1.1 (09, 10).
@@ -58,7 +58,7 @@ Observed with Claude Code 2.1.330, local scope, one temporary profile on one mac
 - `claude plugin marketplace remove` also uninstalls the plugin installed from it (07).
 - Transport: the shorthand form tries SSH first and falls back to HTTPS when SSH fails (04, 16); the explicit HTTPS URL form works (18, 20). The fallback was forced with `GIT_SSH_COMMAND=false`; an unreachable or unauthorized key was not tested separately.
 - The manifest `version` pins the plugin version (per the docs), so a release flow must bump it. A new commit at an unchanged `version` (S5) is unrun.
-- Executor-reported, output not saved: `plugin update` says "already latest" until `marketplace update` is run.
+- Not verified: the update path without re-pinning (a plain `plugin update` after a new commit on the tracked branch, with or without `marketplace update`) was only reported by the executor and no output was saved; do not rely on it. A new commit at an unchanged manifest `version` was not tested.
 - Not covered: private repositories, auto-update, a second machine, user or project scope, Windows/Linux, other clients.
 
 ## Provenance and next verification
@@ -68,7 +68,7 @@ Observed with Claude Code 2.1.330, local scope, one temporary profile on one mac
 | SPEC criterion | Candidate evidence and remaining check |
 | --- | --- |
 | AC-01 | Remaining: static assets and synthetic fixtures only. The definitive mandatory/init/adopt/optional path inventory and an actual GitHub creation/adoption flow are required before any template reduction. No new evidence in this increment. |
-| AC-02 | Evidence: local test separates installed artifact, A and B roots and checks a subdirectory; Claude Code A/B local-scope installs resolved the right project from the installed artifact (comment 7165742456); the GitHub channel installs and loads the pinned version in a session (files 06, 10, 14). Remaining: run the Skill directly and via the intended entry on Codex and Antigravity beyond the observed invocations. |
+| AC-02 | Evidence: local test separates installed artifact, A and B roots and checks a subdirectory; Claude Code A/B local-scope installs resolved the right project from the installed artifact (comment 7165742456; separate profiles, and isolation inside one shared Claude profile is not shown); the GitHub channel installs and loads the pinned version in a session (files 06, 10, 14). Remaining: run the Skill directly and via the intended entry on Codex and Antigravity beyond the observed invocations. |
 | AC-03 | Evidence: canonical QA role packaged; Claude plugin agent loads as `agentic:<name>` with the declared tools (comment 7168438883). Remaining: native delegate identity beyond that, limits and effective model/effort are unrun; "read-only" is instruction-only. Treat unsupported explicit selections according to #76 without substituting another route. |
 | AC-04 | Evidence: diagnostic covers missing rules, an unrelated repo, a nested checkout boundary and an out-of-root rules path; Claude negatives N2 (bad `sha`) and N3 (invalid manifests). Remaining: missing/disabled/incompatible plugin through the client (an enabled-but-uninstalled plugin fails open), unreadable rules, collision (N1, silent first-wins) and gate-bypass attempts need surface-level tests. |
 | AC-05 | Evidence: the script is read-only and fixtures use separate roots; Claude Code and Codex A/B per-project versions, update and rollback (comments 7165742456, 7166540941); the GitHub channel pins by branch or sha, installs 0.1.0/0.1.1 and rolls back by re-pin (04-14). Remaining: update with a new commit at an unchanged `version` (S5) is unrun; B untouched during a GitHub-channel change, auto-update and a second machine are unrun. |
