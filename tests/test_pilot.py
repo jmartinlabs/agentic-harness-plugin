@@ -264,6 +264,34 @@ class PilotBoundaryTests(unittest.TestCase):
         report = self.pin_report(None)
         self.assertEqual((report["project_pin"], report["pin_status"]), (None, "absent"))
 
+    def test_inventory_mode(self):
+        empty = self.sandbox / "empty"
+        empty.mkdir()
+        subprocess.run(["git", "init", "-q"], cwd=empty, check=True)
+        result = self.invoke(empty, "--inventory")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertEqual(report["project_root"], str(empty.resolve()))
+        self.assertEqual(report["entry_files"], {"AGENTS.md": False, "CLAUDE.md": False, "specs/project-rules.md": False})
+        self.assertEqual(report["plugin_owned_paths_in_project"], [])
+        self.assertEqual(report["pin_status"], "absent")
+        self.assertEqual(self.invoke(empty).returncode, 2)  # default mode still blocks
+        (empty / ".claude/skills").mkdir(parents=True)
+        (empty / "AGENTS.md").write_text("x")
+        report = json.loads(self.invoke(empty, "--inventory", "--project", str(empty)).stdout)
+        self.assertEqual(report["plugin_owned_paths_in_project"], [".claude/skills"])
+        self.assertTrue(report["entry_files"]["AGENTS.md"])
+        self.assertFalse(report["entry_files"]["CLAUDE.md"])
+
+    def test_inventory_rejects_artifact_and_unrelated_directory(self):
+        subprocess.run(["git", "init", "-q"], cwd=self.bundle, check=True)
+        self.assertEqual(self.invoke(self.bundle, "--inventory").returncode, 2)
+        outside = self.sandbox / "outside"
+        outside.mkdir()
+        result = self.invoke(outside, "--inventory")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("inventory blocked", result.stderr)
+
     def test_license_is_mit_and_declared(self):
         text = (ROOT / "LICENSE").read_text(encoding="utf-8")
         self.assertTrue(text.startswith("MIT License\n"))
