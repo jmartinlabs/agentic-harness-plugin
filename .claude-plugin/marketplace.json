@@ -7,7 +7,7 @@
     {
       "name": "agentic",
       "source": "./",
-      "description": "Read-only Agentic Harness pilot for project readiness."
+      "description": "Agentic Harness plugin: shared skills, methodology, roles and tools for agent-driven projects."
     }
   ],
   "description": "Agentic Harness repository marketplace."
