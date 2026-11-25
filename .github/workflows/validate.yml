@@ -13,12 +13,40 @@ jobs:
   pilot:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.12']
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python-version }}
       - name: Run regression tests and validate plugin and marketplace manifests
         run: python3 -m unittest discover -s tests -v
+
+  claude-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install the pinned Claude Code client outside the repository
+        run: |
+          mkdir "$RUNNER_TEMP/claude-client"
+          cd "$RUNNER_TEMP/claude-client"
+          npm init -y > /dev/null
+          npm install --no-save --ignore-scripts @anthropic-ai/claude-code@2.1.330
+          node node_modules/@anthropic-ai/claude-code/install.cjs
+          echo "$PWD/node_modules/.bin" >> "$GITHUB_PATH"
+      - name: Validate the plugin and marketplace strictly
+        run: |
+          export CLAUDE_CONFIG_DIR="$(mktemp -d)"
+          claude --version
+          claude plugin validate . --strict
