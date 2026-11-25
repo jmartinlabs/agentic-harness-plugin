@@ -210,6 +210,13 @@ class PilotBoundaryTests(unittest.TestCase):
         self.assertEqual(json.loads(result.stdout)["plugin_owned_paths_in_project"],
                          [".claude/agents", ".codex", "specs/methodology", "templates"])
 
+    def test_artifact_read_rule_hint_is_informational(self):
+        result = self.invoke(self.projects / "a")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertEqual(report["artifact_read_rule_hint"], f"Read(/{report['artifact_root']}/**)")
+        self.assertTrue(report["artifact_read_rule_hint"].startswith("Read(//"))
+
     def test_license_is_mit_and_declared(self):
         text = (ROOT / "LICENSE").read_text(encoding="utf-8")
         self.assertTrue(text.startswith("MIT License\n"))

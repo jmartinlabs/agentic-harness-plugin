@@ -28,9 +28,16 @@ Deliberate delta: `skills/orchestrate/SKILL.md` step 4 now says that the user co
 - The template's `docs/` guides (visual guide, client adapters, evals) are not part of the plugin; the sentences that mention them say so.
 - No claim is made about how Codex or Antigravity load these assets at runtime; only the earlier pilot observations below exist.
 
-### Headless and permissions note (observed, single environment, local synthetic)
+### Permissions for plugin files (observed)
 
-In `claude -p` with default permissions, reading plugin files outside the project directory (for example `methodology/*.md` of a plugin loaded with `--plugin-dir`) was denied (`permission_denied`), while the same reads succeeded with `--add-dir <plugin dir>`. The effect for installed (cache) plugins is being tested.
+Observed with an installed plugin (from the cache), Claude Code 2.1.330, `claude -p`, default permission mode, local synthetic, 9 sessions; the evidence is kept by the coordinator outside this repository.
+
+1. Reading the plugin's own files (`methodology/*.md`, `roles/*.md`, `scripts/*`, even files inside the invoked skill's own directory) from the project is denied by default. Invoking a skill does not grant access to its directory.
+2. A project-shared `.claude/settings.json` allow rule was ignored in `-p` because the workspace counts as untrusted ("Ignoring ... permissions.allow entry ... workspace has not been trusted"). It is expected to apply after the interactive trust dialog, but that was not tested.
+3. `Read(//<absolute plugin install path>/**)` works when placed in the untracked `.claude/settings.local.json` or in the user-level settings (user-level also works in `-p` without workspace trust). A child plugin agent inherits the parent's rule.
+4. The rule is not portable as written: the install path depends on the Claude config directory, the marketplace name and the version, and permission rules have no documented plugin-root variable. The `~/...` form and a glob over marketplace names were not tested (the test layout could not authenticate with a temporary HOME).
+5. Not measured: interactive prompts (likely one per path, untested), a child agent without the rule, and a merge-gate observation with the policy readable.
+6. Consequence: onboarding must include an explicit step "allow Read on the plugin install directory" (the install path is printed by `claude plugin list --json` as `installPath`). A project that lacks the rule can silently lose access to the common methodology unless the model reports it, so the thin project `AGENTS.md` must say: if plugin files cannot be read, stop and ask the user to add the allow rule. This is addressed in the template-transformation increment. `scripts/verify-project.py` prints an informational `artifact_read_rule_hint` (`Read(//<artifact_root>/**)`) computed from the artifact root; it changes no behaviour or exit code.
 
 ### Plugin and project paths
 
