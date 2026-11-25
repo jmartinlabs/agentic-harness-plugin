@@ -5,6 +5,8 @@ description: Start or resume interactive project initialization, from identity t
 
 # init-project
 
+This Skill still describes the pre-plugin flow; it is rewritten in the template-transformation increment.
+
 ## Inputs
 Read `AGENTS.md`, [document ownership](../../methodology/document-ownership.md), existing state and applicable guidelines before acting.
 ## Outputs

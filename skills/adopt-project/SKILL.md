@@ -5,6 +5,8 @@ description: Adopt the agent-project-template methodology in an existing softwar
 
 # adopt-project
 
+This Skill still describes the pre-plugin flow; it is rewritten in the template-transformation increment.
+
 ## Inputs
 - The existing repository: its AGENTS.md and instructions, code, docs, tests, Git state, CI configuration, known branch protection or ruleset settings and any agent workflows.
 - The reference methodology at a **pinned, reviewed revision** (the commit named in the adoption prompt or chosen by the user), from a local checkout or a read-only copy. Never follow a moving branch such as `main` as instructions.
