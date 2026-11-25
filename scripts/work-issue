@@ -292,14 +292,39 @@ def agent_routing(labels, agents=AGENTS):
     return sorted(set(known)), sorted(set(unknown))
 
 
+def project_root(explicit=None):
+    """The project this command runs for: `--repo-root`, else the git top level of the
+    working directory, else the working directory. Never the directory of this tool."""
+    if explicit:
+        return Path(explicit)
+    try:
+        proc = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True,
+                              text=True, check=False)
+    except OSError:
+        return Path.cwd()
+    top = proc.stdout.strip()
+    return Path(top) if proc.returncode == 0 and top else Path.cwd()
+
+
+def repo_root_option(argv):
+    """The `--repo-root` value in argv, read before parsing so the catalogue can use it."""
+    args = list(sys.argv[1:] if argv is None else argv)
+    for index, arg in enumerate(args):
+        if arg == "--repo-root" and index + 1 < len(args):
+            return args[index + 1]
+        if arg.startswith("--repo-root="):
+            return arg.split("=", 1)[1]
+    return None
+
+
 def load_catalogue(root=None):
     """Agent catalogue: `agents:` from `.agents/tracker.local.yaml`, else the default.
 
     The value is a comma list or `[a, b]`. Anything malformed fails closed with an error
     instead of silently falling back, so a typo can never widen the catalogue.
     """
-    # Default to the checkout that holds this script, not the caller's working directory.
-    path = Path(root or Path(__file__).resolve().parent.parent) / TRACKER_LOCAL
+    # Default to the project (cwd), never to the directory that holds this tool.
+    path = Path(root or project_root()) / TRACKER_LOCAL
     try:
         text = path.read_text(encoding="utf-8")
     except OSError:
@@ -1317,7 +1342,7 @@ class Service:
             return None
         return last
 
-    def context(self, number, agent=None, publish=False, summary=None, repo_root="."):
+    def context(self, number, agent=None, publish=False, summary=None, repo_root=None):
         """Recover and expose the Issue context; optionally publish a bound receipt."""
         agent = agent or self.agent
         if publish and (not agent or agent not in AGENTS):
@@ -1341,7 +1366,7 @@ class Service:
         digest = fingerprint(item, material)
         refs = references(item, comments[:COMMENT_LIMIT])
         pr_states = {ref: self.github.pr_state(ref) for ref in refs["prs"]}
-        root = Path(repo_root)
+        root = project_root(repo_root)
         found = context_findings(item, comments[:COMMENT_LIMIT], refs,
                                  spec_present=lambda path: (root / path).is_file(),
                                  pr_states=pr_states, truncated=truncated)
@@ -1725,7 +1750,7 @@ def build_parser():
     context.add_argument("--issue", type=int, required=True)
     context.add_argument("--publish", action="store_true")
     context.add_argument("--summary-file")
-    context.add_argument("--repo-root", default=".")
+    context.add_argument("--repo-root", default=None)
     move = commands.add_parser("move", parents=[common],
                                help="phase transition allowed to the agent")
     move.add_argument("--issue", type=int, required=True)
@@ -1760,7 +1785,7 @@ def read_summary(args):
 
 def main(argv=None):
     try:
-        AGENTS[:] = load_catalogue()
+        AGENTS[:] = load_catalogue(project_root(repo_root_option(argv)))
     except ValueError as error:
         print("Not executed: %s" % error, file=sys.stderr)
         return EXIT_REFUSED
