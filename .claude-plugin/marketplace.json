@@ -1,0 +1,14 @@
+{
+  "name": "agentic-harness",
+  "owner": {
+    "name": "jmartinlabs"
+  },
+  "plugins": [
+    {
+      "name": "agentic",
+      "source": "./",
+      "description": "Read-only Agentic Harness pilot for project readiness."
+    }
+  ],
+  "description": "Agentic Harness repository marketplace."
+}
