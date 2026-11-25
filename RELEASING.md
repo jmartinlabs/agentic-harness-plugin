@@ -25,9 +25,9 @@ Check the pin with `agentic-verify-project`: `pin_status` is `tag-match`, `tag-m
 
 ## Update and rollback
 
-- Update: bump the pin to the new tag or sha and reinstall; changing the pin (re-add by sha) is the observed flow (README, "GitHub distribution channel"). `marketplace update` followed by `plugin update` is the intended routine but is not claimed here: the README records only an executor report with no saved output.
+- Update: bump the pin to the new tag or sha and reinstall (re-add by sha is observed, README "GitHub distribution channel"). For a marketplace that tracks a branch, `plugin update` updates only when the manifest `version` changed; at an unchanged `version` it reports "already at the latest version" (observed, README "Updating and rolling back"). The new version applies after a restart.
 - Rollback: re-pin to the previous tag or sha and reinstall. Re-pinning by sha returned 0.1.1 to 0.1.0 in the observed channel flow (README, "GitHub distribution channel").
-- Branch-tracking update without a re-pin: to be completed with the branch-update result.
+- Consequence: every release must bump `version`; consumers who need an exact revision pin a tag or a full sha.
 
 ## Compatibility with the scaffold
 
