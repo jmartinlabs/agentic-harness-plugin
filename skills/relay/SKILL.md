@@ -5,6 +5,8 @@ description: Exchange substantive messages between two agents through one Git br
 
 # relay
 
+The command-line tool for this skill ships in the next increment; until then follow the manual protocol in [the issue workflow](../../methodology/issue-workflow.md).
+
 Optional, user-triggered transport for a two-participant conversation. It is not a work
 queue, a controller, an approval channel or a second source of truth. The canonical packet
 and return contracts remain in [the work packet](../../templates/agent-work-packet.md)

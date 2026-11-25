@@ -5,6 +5,8 @@ description: Take authorized work from Issues and an optional GitHub Project, ro
 
 # work-issue
 
+The command-line tool for this skill ships in the next increment; until then follow the manual protocol in [the issue workflow](../../methodology/issue-workflow.md).
+
 Entry point for work that already exists as Issues, optionally tracked in a GitHub Project. Only the
 orchestrator runs it: a delegated role never takes Issues. It reads, routes, reserves and reports; it
 never approves, merges, deploys or closes. The contract (statuses, owners, manual protocol, routing,

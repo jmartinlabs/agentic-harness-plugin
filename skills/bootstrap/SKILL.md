@@ -5,6 +5,8 @@ description: Build and verify the smallest end-to-end walking skeleton from appr
 
 # bootstrap
 
+This Skill still describes the pre-plugin flow; it is rewritten in the template-transformation increment.
+
 ## Inputs
 Read `AGENTS.md`, [document ownership](../../methodology/document-ownership.md), existing state and applicable guidelines before acting.
 ## Outputs
