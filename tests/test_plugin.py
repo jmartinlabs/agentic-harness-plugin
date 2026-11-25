@@ -137,7 +137,8 @@ ALLOWED_PATHS = {
     ("methodology/document-ownership.md", "scripts/"): 1,
     ("methodology/issue-workflow.md", "scripts/"): 3,
     ("skills/relay/GITHUB_API.md", "scripts/"): 2,
-    ("skills/work-issue/SKILL.md", "scripts/"): 1,
+    ("skills/work-issue/SKILL.md", "scripts/"): 2,
+    ("skills/relay/SKILL.md", "scripts/"): 1,
     # Template-only validator named in a verbatim sentence; the plugin does not ship it.
     ("methodology/dynamic-agents.md", "scripts/"): 1,
     # Derived-project CI path families and examples of a project's own harness (project-owned).

@@ -22,10 +22,15 @@ Deliberate delta: `skills/orchestrate/SKILL.md` step 4 now says that the user co
 ### Not yet in the plugin
 
 - The command-line tools (`work-issue`, `agent-relay`, `review-read`, the delegation-route and usage tools) and their tests ship in the next increment. Until then follow the manual protocol in `methodology/issue-workflow.md`; the `work-issue` and `relay` Skills still name `scripts/...` paths that the plugin does not yet contain.
+- The v2 schema checker named in `methodology/dynamic-agents.md` (`scripts/validate-template`) is not in the plugin; its replacement (`validate-core`) ships in the tools increment. Until then the v2 file is validated only by the coordinator reading it per `methodology/dynamic-agents.md`, which stays verbatim.
 - Native adapters other than the Claude Code agents (Codex hooks, OpenCode agents and plugin, Hermes) are not packaged.
 - The `init-project`, `adopt-project` and `bootstrap` Skills still describe the pre-plugin, copy-based flow; they are rewritten in the template-transformation increment (each says so at its top). `methodology/document-ownership.md` still opens with the template's wording.
 - The template's `docs/` guides (visual guide, client adapters, evals) are not part of the plugin; the sentences that mention them say so.
 - No claim is made about how Codex or Antigravity load these assets at runtime; only the earlier pilot observations below exist.
+
+### Headless and permissions note (observed, single environment, local synthetic)
+
+In `claude -p` with default permissions, reading plugin files outside the project directory (for example `methodology/*.md` of a plugin loaded with `--plugin-dir`) was denied (`permission_denied`), while the same reads succeeded with `--add-dir <plugin dir>`. The effect for installed (cache) plugins is being tested.
 
 ### Plugin and project paths
 
@@ -100,7 +105,7 @@ Observed with Claude Code 2.1.330, local scope, one temporary profile on one mac
 | AC-04 | Evidence: diagnostic covers missing rules, an unrelated repo, a nested checkout boundary and an out-of-root rules path; Claude negatives N2 (bad `sha`) and N3 (invalid manifests). Remaining: missing/disabled/incompatible plugin through the client (an enabled-but-uninstalled plugin fails open), unreadable rules, collision (N1, silent first-wins) and gate-bypass attempts need surface-level tests. |
 | AC-05 | Evidence: the script is read-only and fixtures use separate roots; Claude Code and Codex A/B per-project versions, update and rollback (comments 7165742456, 7166540941); the GitHub channel pins by branch or sha, installs 0.1.0/0.1.1 and rolls back by re-pin (04-14). Remaining: update with a new commit at an unchanged `version` (S5) is unrun; B untouched during a GitHub-channel change, auto-update and a second machine are unrun. |
 | AC-06 | Evidence: skills, methodology, roles, templates and Claude agents are moved with per-file source blob, destination hash and transformation class in [PROVENANCE.md](PROVENANCE.md), checked by tests (the byte comparison with the template baseline runs only when `AGENTIC_TEMPLATE_CHECKOUT` points to a checkout containing it). Remaining: command-line tools and their tests, other native adapters, measurement tools, validators, and client-level evidence that the moved assets load. No existing capability is retired by this package. |
-| AC-07 | Evidence: this slice contains no competing approval rules; `approvals.md` and `qa-review.md` are pinned byte-identical to e9a4616 by `sha256` tests; CI runs 45656722504 (2dc8015) and 45656917820 (506e52b) are green. The moved skills were not re-reviewed semantically beyond the orchestrate step 4 wording fix. Remaining: review all common semantic consumers, including the #76 v2 selection rule, and record runtime context loads. |
+| AC-07 | Evidence: this slice contains no competing approval rules; `approvals.md` and `qa-review.md` are pinned byte-identical to e9a4616 by `sha256` tests; CI runs 45656722504 (2dc8015) and 45656917820 (506e52b) are green. Independent semantic audit of the moved files against e9a4616 found no drift (increment 5 audit; evidence kept by the coordinator, not in the repository). Remaining: review all common semantic consumers, including the #76 v2 selection rule, and record runtime context loads. |
 
 This README makes no operational claim and no merge, release or migration is requested.
 
