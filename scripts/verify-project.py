@@ -2,6 +2,7 @@
 """Read-only readiness probe. Resolve artifact and project independently."""
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -68,6 +69,26 @@ def plugin_owned_paths(root):
     return found
 
 
+def project_pin(root, version):
+    """Informational only: the ref of the agentic-harness marketplace in the project's Claude settings."""
+    ref = None
+    for name in (".claude/settings.json", ".claude/settings.local.json"):
+        try:
+            data = json.loads((root / name).read_text(encoding="utf-8"))
+            value = data["extraKnownMarketplaces"]["agentic-harness"]["source"].get("ref")
+        except (OSError, ValueError, KeyError, TypeError, AttributeError):
+            continue
+        if isinstance(value, str) and value:
+            ref = value
+    if ref is None:
+        return None, "absent"
+    if ref == f"v{version}":
+        return ref, "tag-match"
+    if re.fullmatch(r"v\d+\.\d+\.\d+", ref):
+        return ref, "tag-mismatch"
+    return ref, "sha-or-branch"
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project", type=Path, default=Path.cwd())
@@ -92,9 +113,13 @@ def main():
             path = root / relative
             if path.exists() or path.is_symlink():
                 config = file_under(root, relative)
+        version = json.loads(manifest.read_text(encoding="utf-8"))["version"]
+        pin, pin_status = project_pin(root, version)
         print(json.dumps({
             "artifact_root": str(ARTIFACT),
-            "artifact_version": json.loads(manifest.read_text(encoding="utf-8"))["version"],
+            "artifact_version": version,
+            "project_pin": pin,
+            "pin_status": pin_status,
             "project_root": str(root),
             "project_rules": str(rules),
             "plugin_owned_paths_in_project": plugin_owned_paths(root),

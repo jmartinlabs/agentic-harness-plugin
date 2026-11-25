@@ -234,6 +234,36 @@ class PilotBoundaryTests(unittest.TestCase):
         self.assertEqual(report["artifact_read_rule_hint"], f"Read(/{report['artifact_root']}/**)")
         self.assertTrue(report["artifact_read_rule_hint"].startswith("Read(//"))
 
+    def pin_report(self, version_ref, local=False):
+        project = self.projects / "a"
+        (project / ".claude").mkdir(exist_ok=True)
+        if version_ref is not None:
+            settings = {"extraKnownMarketplaces": {"agentic-harness": {"source": {
+                "source": "github", "repo": "jmartinlabs/agentic-harness-plugin", "ref": version_ref}}}}
+            name = "settings.local.json" if local else "settings.json"
+            (project / ".claude" / name).write_text(json.dumps(settings))
+        result = self.invoke(project)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return json.loads(result.stdout)
+
+    def test_pin_status_four_cases_and_exit_code_unchanged(self):
+        version = json.loads((ROOT / "plugin.json").read_text())["version"]
+        for ref, local, status in ((f"v{version}", False, "tag-match"), ("v0.0.1", True, "tag-mismatch"),
+                                   ("a" * 40, False, "sha-or-branch"), ("main", True, "sha-or-branch"),
+                                   (None, False, "absent")):
+            with self.subTest(ref=ref):
+                report = self.pin_report(ref, local)
+                self.assertEqual((report["project_pin"], report["pin_status"]), (ref, status))
+                self.assertEqual(report["artifact_version"], version)
+                shutil.rmtree(self.projects / "a/.claude")
+
+    def test_pin_status_ignores_malformed_settings(self):
+        project = self.projects / "a"
+        (project / ".claude").mkdir()
+        (project / ".claude/settings.json").write_text("{not json")
+        report = self.pin_report(None)
+        self.assertEqual((report["project_pin"], report["pin_status"]), (None, "absent"))
+
     def test_license_is_mit_and_declared(self):
         text = (ROOT / "LICENSE").read_text(encoding="utf-8")
         self.assertTrue(text.startswith("MIT License\n"))

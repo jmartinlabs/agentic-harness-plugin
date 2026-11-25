@@ -1,4 +1,6 @@
-# Agentic Harness · pilot candidate
+# Agentic Harness plugin
+
+v1.0.0: Claude Code verified end to end (local synthetic); Codex and Antigravity: see [Clients](#clients-v1-targets-observed). See [CHANGELOG.md](CHANGELOG.md) and [RELEASING.md](RELEASING.md). The limitations and evidence labels below still apply.
 
 ## Quick start
 
@@ -6,7 +8,7 @@
 2. Add the marketplace and install the plugin, always, even when the project already declares them in its committed `.claude/settings.json`: `claude plugin marketplace add jmartinlabs/agentic-harness-plugin#<tag-or-sha> --scope local`, then `claude plugin install agentic@agentic-harness --scope local`. The committed pin is the project's version record, but it was NOT sufficient for install in `-p` (install failed with 'Plugin "agentic" not found in marketplace "agentic-harness"'; interactive startup behaviour is untested). Both commands write `extraKnownMarketplaces` and `enabledPlugins` into the untracked `.claude/settings.local.json`. The tested flows used `--scope local`; project scope is untested.
 3. Trust the project: open it interactively once and accept the trust dialog, so the project-shared `.claude/settings.json` rules apply. In `-p` the project-shared rules are ignored (measured); after the trust dialog they are expected to apply, which is untested.
 4. Allow the plugin's files and tools. Run `agentic-verify-project --print-rules` (it only prints) and merge the printed `permissions.allow` entries into `.claude/settings.local.json`; the CLI has already created that file, so do not paste over it. Or approve the permission prompts with "don't ask again" (interactive; untested). Verified (local, `-p`): the Read rule and the `agentic-verify-project` and `agentic-work-issue` rules. Untested: the other four shim rules, interactive "don't ask again", project-scope install and the trust dialog. Re-run `--print-rules` after any plugin update: the Read rule contains the install path of that version. See "Permissions for plugin files".
-5. Run `/agentic:verify-project` to check readiness.
+5. Run `/agentic:verify-project` to check readiness. It also reports `project_pin` (the `ref` of the `agentic-harness` marketplace in `.claude/settings.json` or `.claude/settings.local.json`) and `pin_status` (`tag-match`, `tag-mismatch`, `sha-or-branch` or `absent`), informational only; it never changes the exit code.
 6. Run `/agentic:init-project` for a new project, or `/agentic:adopt-project` for an existing one.
 
 These steps are Claude Code's; for the Codex and Antigravity install commands as measured, see [Clients](#clients-v1-targets-observed).
@@ -15,7 +17,7 @@ A project created from the scaffold: run steps 2-6; the scaffold's own README li
 
 Nothing common is copied into the project: skills, roles, methodology, templates, scripts and agents stay in the plugin, and the skills create only project documents (`specs/project.md`, `specs/setup-progress.md`, `specs/roadmap.md` and so on).
 
-This is a candidate for [SPEC #77](https://github.com/jmartinlabs/agent-project-template/issues/77#issuecomment-7165024336): the plugin `agentic` centralizes the common harness capabilities so that a project keeps only its context, configuration, rules and application files. It packages the operating core below plus a read-only readiness Skill and diagnostic script. It does not replace an existing harness. Licensed under the MIT licence (`LICENSE`, holder jmartinlabs, 2026).
+This implements [SPEC #77](https://github.com/jmartinlabs/agent-project-template/issues/77#issuecomment-7165024336): the plugin `agentic` centralizes the common harness capabilities so that a project keeps only its context, configuration, rules and application files. It packages the operating core below plus a read-only readiness Skill and diagnostic script. It does not replace an existing harness. Licensed under the MIT licence (`LICENSE`, holder jmartinlabs, 2026).
 
 `methodology/approvals.md` is the canonical approvals source; where it mentions `orchestrate`, it refers to the `orchestrate` Skill in this package.
 

@@ -2,7 +2,7 @@
   "$schema": "https://antigravity.google/schemas/v1/plugin.json",
   "displayName": "Agentic",
   "name": "agentic",
-  "version": "0.1.0",
-  "description": "Read-only Agentic Harness pilot for project readiness.",
+  "version": "1.0.0",
+  "description": "Agentic Harness plugin: shared skills, methodology, roles and tools for agent-driven projects.",
   "license": "MIT"
 }
