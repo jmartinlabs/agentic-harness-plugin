@@ -1,0 +1,49 @@
+# Provenance
+
+Every file below was moved from the Agentic Template at commit `e9a46160753c5e61f7d3291da9e6a0299f840aa0` (read as data). `Source blob` is `git rev-parse e9a4616:<source>`; `sha256` is of the destination bytes. Class precedence when several apply: deliberate-delta > path-reword > link-rewrite > copy. `copy` means byte-identical to the source.
+
+Deliberate deltas: `skills/orchestrate/SKILL.md` step 4 (one sentence about who configures what, required by issue 77, keeping the v2 semantics of #75/#76); the sentence that the command-line tool ships in the next increment (work-issue, relay); the banner that init-project, adopt-project and bootstrap still describe the pre-plugin flow.
+
+Not moved on purpose: `specs/methodology/acceptance-scenarios.md` (template-only), `scripts/*` tools and their tests (next increment), `docs/*`.
+
+| Source | Source blob (git) | Destination | sha256 (destination) | Class | Notes |
+| --- | --- | --- | --- | --- | --- |
+| `.claude/agents/functional.md` | `b411ab564b8ec0e97f5e861861dcfc83f63a60b3` | `agents/functional.md` | `cb991a897b75c4027718adcab832b455eb56c6d3382cb49f0b45306278b5ed68` | path-reword | role path now CLAUDE_PLUGIN_ROOT/roles; frontmatter unchanged |
+| `.claude/agents/implementation.md` | `3f17ab18f035aa6bd55fc168c9393e586c9a648b` | `agents/implementation.md` | `8a6883b9f07577921df3fb7be2b242d2d8b21bf8818dfa36341b99b6d116f569` | path-reword | role path now CLAUDE_PLUGIN_ROOT/roles; frontmatter unchanged |
+| `.claude/agents/infrastructure.md` | `46f55a739a3896570dbb4e1559c7e4b2e0350350` | `agents/infrastructure.md` | `660cdc19b5323c95ff91ffb3d34ee9f7988543023e602b672cf770934fb172cf` | path-reword | role path now CLAUDE_PLUGIN_ROOT/roles; frontmatter unchanged |
+| `.claude/agents/qa-review.md` | `d01aaf667499036ec0aaa6973d8d24cd1caead02` | `agents/qa-review.md` | `4d0c318806c9a7b02de8c2d5e138d1a13f48c81782ac4907badec5a8aa0b3e5f` | path-reword | role path now CLAUDE_PLUGIN_ROOT/roles; frontmatter unchanged |
+| `specs/methodology/approvals.md` | `5c5e580f3a505f560b87673f195b27921aff66f3` | `methodology/approvals.md` | `e87dc895d259d1839724e35340623957051302503504e2e9387d4bbe0797fa8f` | copy |  |
+| `specs/methodology/ci-policy.md` | `6adee183ebb6570b209a7e9c6bf82b3c7df6e57c` | `methodology/ci-policy.md` | `6f41fe2183bb431192d3a00d64b164fc8c9010d72137ca8ce70ad2fa0645d257` | copy |  |
+| `specs/README.md` | `07848da569b14f4c0ddedacc9475c13fd00dbdd7` | `methodology/document-ownership.md` | `ba071fe46e3c03adeaca2fd01a0d1c42c0e36810da989acf3f14cc2eaebac36c` | path-reword | specs/README.md moved; links made sibling; specs/ prefix on project documents; template-only acceptance-scenarios link unlinked |
+| `specs/methodology/dynamic-agents-external-clients.md` | `243ad7f988356b4d2c9311cab03eb1ad9973f55d` | `methodology/dynamic-agents-external-clients.md` | `4b83ea975ec013baefca1719cd0bbf74d4f672202f46eca9d5244a8dcddd9fac` | link-rewrite | relative links only |
+| `specs/methodology/dynamic-agents.md` | `f538503219331cd25bf7e038a3c69c4388f4d31d` | `methodology/dynamic-agents.md` | `8edfa3b337cbb2327a1d89d03e0c1db6560590b297b03fde8b604374e9d41e0d` | path-reword | harness path made plain project path; template-only docs unlinked; plugin links |
+| `specs/methodology/epic-orchestration.md` | `e4138ef93d80a98625cf22923f41d66f8d7895b6` | `methodology/epic-orchestration.md` | `85f718a22a553ab65e34b7bc48aceb82233b416f89449cb199e2d2d5c5a38598` | path-reword | template-only guide unlinked; plugin links |
+| `specs/methodology/identifiers.md` | `f811bb026f4fb2eb1cfd12caf78b9aaccb52964e` | `methodology/identifiers.md` | `0ae309b8ced8a06a7e487553fc10707baa84075782bd0fd00612d176473f0cf1` | path-reword | specs/README.md reference points to document-ownership.md |
+| `specs/methodology/issue-workflow.md` | `1cbfd63c6aa3fc89b7276959fe889a514f4ac7a4` | `methodology/issue-workflow.md` | `264767ba14fd6c13334e455c2f904ba4d36559ddbd7b7e00123f95af2519f569` | path-reword | this repository reworded to the current project repository |
+| `specs/methodology/workflows.md` | `778c3f0ad35e880b5a56522b2861f0fe751fe04a` | `methodology/workflows.md` | `dc94161c0aef31f79fce7522ac94e6e52f0747c67687663fc3549be84f9c484c` | copy |  |
+| `.agents/roles/README.md` | `6a4a00ec1c1ecf4f2edf3c7158149785f2ec1c73` | `roles/README.md` | `8d7f52cc99d08cd3da840c3aa29335b51f73200496fed96f68c510bc21d41283` | path-reword | AGENTS.md plain project path; template-only OpenCode doc unlinked; plugin links |
+| `.agents/roles/functional.md` | `2087caa54932e122dd0262f3d5d1c669575c9e84` | `roles/functional.md` | `6e6547d7fc2cd33de4c53c4a9737b1954ab9360e0f319d6f5454a8b35af7f6cc` | copy |  |
+| `.agents/roles/implementation.md` | `34ffbe05e2d8ba5fc228c8a9b453eb346a32c5c4` | `roles/implementation.md` | `7bb87b100fb037c135b6a340903ada84d68c98d3cf3413864f772d50f945078e` | copy |  |
+| `.agents/roles/infrastructure.md` | `daf9753c5439a6cee59e514ee3d7b010ed2edc26` | `roles/infrastructure.md` | `023f3e4dc7fc5b7dcdd6548056bc42a221b344e78f21d31fc2c4cd2b37b290ad` | copy |  |
+| `.agents/roles/qa-review.md` | `0643568ff174a0532a508bca97125d60281f344d` | `roles/qa-review.md` | `fa66317784b1dc82c718a651bccbe16242b2bf65a2a56ac69f4969ce43312de1` | copy |  |
+| `.agents/skills/adopt-project/SKILL.md` | `13bb73894f79768da8ee05e34071134c213ea081` | `skills/adopt-project/SKILL.md` | `077ca6088b95e7d83421ecad9b8f290648df50a6edeba0d669890cb05c636d00` | deliberate-delta | pre-plugin banner |
+| `.agents/skills/bootstrap/SKILL.md` | `2c7c294b9faa36977f4fb0b5af993f3267c78452` | `skills/bootstrap/SKILL.md` | `99e54de003ba945f0eea423b60dd6b1e1a61f1551cdfae2a95a4c7e76321abdf` | deliberate-delta | pre-plugin banner; document-ownership link; links |
+| `.agents/skills/dev/SKILL.md` | `3981ef25d40ae605a5f6bd2182afbbd18e88beea` | `skills/dev/SKILL.md` | `cadd21e479bbfcb09a7b865ce6960e8c7ee6d10b2612dc16639b8e840f6b736c` | path-reword | Read line points to document-ownership.md; links |
+| `.agents/skills/handoff/SKILL.md` | `c5b7142ddd9a0c07afedb3525e55714dd4bc3aa2` | `skills/handoff/SKILL.md` | `527cd52c338c138388fcca8748725a42e2ca190bbe90fa350df1c64387e3370d` | copy |  |
+| `.agents/skills/init-project/SKILL.md` | `d334a747bdd533b7b736086b60e74d2d23e54874` | `skills/init-project/SKILL.md` | `8c2960058308f1890e5f473eb3b8671420266002ec8273d8c41bb13eb3dd31ee` | deliberate-delta | pre-plugin banner; document-ownership link; links |
+| `.agents/skills/orchestrate/SKILL.md` | `8bdc1ca888a281d15b81cc1694c080a629e8769f` | `skills/orchestrate/SKILL.md` | `289460dad5553ac766773230d9aa3480cc2315d994688d12a1d700be8460bc00` | deliberate-delta | step 4 wording fix (issue 77, keeps 76 semantics) |
+| `.agents/skills/relay/GITHUB_API.md` | `40cfb75333d4b32f7f46e9ed6c26f315adbfa4b4` | `skills/relay/GITHUB_API.md` | `78e22afd9c473d55e7a03fb81f804b471dbff03450a43937626ee2360261adca` | copy |  |
+| `.agents/skills/relay/SKILL.md` | `58fe3f1c548a445d0689e648d05c88d53bb93bde` | `skills/relay/SKILL.md` | `a1721206d34180b0b74542559fc0da93943d331c282f149bbc6fdbc60d7b23f2` | deliberate-delta | tool-ships-in-next-increment sentence; links |
+| `.agents/skills/roadmap/SKILL.md` | `6e938699ad54dc0cb1e525fb72ebf8ae68997e14` | `skills/roadmap/SKILL.md` | `1cb6c2cfe4b5636e4fda81a5c8db755a83b4348afdaba80b2953798f813c6346` | path-reword | Read line points to document-ownership.md |
+| `.agents/skills/spec/SKILL.md` | `910620681f99ae65bb27de198a7601d2b3d07910` | `skills/spec/SKILL.md` | `04de69ad8b0ae741de57742496a3c7a8c45e0389c49332ed4776eeac4e786fe1` | path-reword | Read line points to document-ownership.md; links |
+| `.agents/skills/task/SKILL.md` | `aaced45fe775018d482edcd5903c06489beb981b` | `skills/task/SKILL.md` | `c656fee3a5fc6666cb7e404cf85582238b16682fc8aee9f878b2f15212c78511` | link-rewrite | relative links only |
+| `.agents/skills/tweak/SKILL.md` | `bb470e22d6004366ee54c7e8c1e94db6b24b7781` | `skills/tweak/SKILL.md` | `029b1d6bc88f8e00031c3bfbfa126ead30f463110db34424cb3ca6c161f61c86` | link-rewrite | relative links only |
+| `.agents/skills/work-issue/SKILL.md` | `8849b4691d903d8ae2726f07c787a5faf937b6b5` | `skills/work-issue/SKILL.md` | `92b081798362d6d947aa80219f8b720cee5566d9e2f1d5ae822f8d80f9292acc` | deliberate-delta | tool-ships-in-next-increment sentence; links |
+| `templates/agent-work-packet.md` | `8d6a09208da01b5467cfe7e5404a157f45d2fa84` | `templates/agent-work-packet.md` | `fa30885220462be5f619660af9b8f9718e819916af87f088e65f6746db0b8181` | link-rewrite | relative links only |
+| `templates/brainstorming.md` | `58c580dfd5816e9e38f0b65c2adb277fbe9b4896` | `templates/brainstorming.md` | `f63d98662ddc133d4c7669e0ff7117c6a2ea37d9a914a594c5d7cc6fa9f8c9a7` | copy |  |
+| `templates/epic-board.md` | `af0d4013b78e8298c186dafb02a5647bf4a977c4` | `templates/epic-board.md` | `301039b0903bc0a3483e8d9749cd3f8ff8ec78c97bce7d6e75a581566b8f84a4` | copy |  |
+| `templates/issue.md` | `1a6a35b4d0ddbb74b751f3e03b11287e63e7ab46` | `templates/issue.md` | `91a1426352423ca5c43ea94dc65fcefd3ea0b6bbc467870ba808dd240a843880` | link-rewrite | relative links only |
+| `templates/progress.md` | `54ca98f1e076408e9894aa0c17d841fba78bd069` | `templates/progress.md` | `dfd91519e9693579dcacb51e48d7f0d806aabe5aafe69488533850e2d37fc1a0` | copy |  |
+| `templates/roadmap.md` | `cb6d3b2031e3e7ed17a8a9e6dbb0e7cba5a49c94` | `templates/roadmap.md` | `6e02140e4193c992a96e9180838edc034982f90ad66d93ff57b558717046b00b` | copy |  |
+| `templates/specification.md` | `dcfc83c4e5feac3402165ba2774e25e85fcecfb5` | `templates/specification.md` | `c5863038125063c7ef7a29ed2d82c88c09e19c94cb1bab6182feaa1b4ae5cc18` | copy |  |
+| `templates/testplan.md` | `716edd2677dd3a5d6b3053e476d4c9ff74e5f115` | `templates/testplan.md` | `fb360bb3d64f3e79fcdb70cb5900c13d663576132a31aa0f4abe0dda212599a6` | copy |  |
