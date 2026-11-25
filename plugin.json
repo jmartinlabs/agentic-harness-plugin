@@ -2,5 +2,6 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "agentic",
   "version": "0.1.0",
-  "description": "Read-only Agentic Harness pilot for project readiness."
+  "description": "Read-only Agentic Harness pilot for project readiness.",
+  "license": "MIT"
 }
