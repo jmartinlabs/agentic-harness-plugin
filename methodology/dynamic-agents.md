@@ -65,7 +65,7 @@ before reading. A reported model or the presence of a tool does not establish th
 
 Read one file on demand, with no startup scan or sibling lookup. Missing file leaves native
 delegation under its existing rules and enables no external clients. An unreadable or invalid
-active file stops dispatch. Require strict JSON with unique keys and the v2 schema checked by `scripts/validate-template`.
+active file stops dispatch. Require strict JSON with unique keys and the v2 schema checked by `python3 <plugin root>/scripts/validate-core --project <project>`.
 CI checks all files separately. Reject paths outside the checkout.
 There is no v1 reader or fallback. `external` is covered by the
 [external procedure](dynamic-agents-external-clients.md).

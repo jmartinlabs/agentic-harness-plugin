@@ -104,7 +104,7 @@ ALLOWED_PATHS = {
     ("skills/relay/SKILL.md", "scripts/"): 1,
     # adopt-project runs the plugin's own scripts/verify-project.py to list plugin-owned copies in the project.
     ("skills/adopt-project/SKILL.md", "scripts/"): 2,
-    # Template-only validator named in a verbatim sentence; the plugin does not ship it.
+    # The plugin's own validator (validate-core) named in the v2 schema sentence (deliberate delta).
     ("methodology/dynamic-agents.md", "scripts/"): 1,
     # Derived-project CI path families and examples of a project's own harness (project-owned).
     ("methodology/ci-policy.md", "scripts/"): 3,

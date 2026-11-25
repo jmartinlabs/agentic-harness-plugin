@@ -15,4 +15,6 @@ First release. Not tagged or released until the owner approves it.
 - Manifests for Claude Code, Codex and Antigravity; marketplace descriptors for Claude Code and Codex.
 
 ### Known limitations
-Evidence is local and synthetic; Codex and Antigravity are only partly verified. See the README sections "Clients" and "Not yet in the plugin" for the exact limits.
+Evidence is local and synthetic. Every release must bump `version`: a branch-tracking install does not update at an unchanged `version`.
+
+Codex and Antigravity are only partly verified (Codex desktop and interactive surfaces, upgrade refresh and effective effort when not requested are unrun). See the README sections "Clients" and "Not yet in the plugin" for the exact limits.
