@@ -64,3 +64,20 @@ jobs:
           export CLAUDE_CONFIG_DIR="$(mktemp -d)"
           claude --version
           claude plugin validate . --strict
+
+  required:
+    if: always()
+    needs: [pilot, claude-validate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+    steps:
+      - name: Fail unless every needed job succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "needed job results: $RESULTS"
+          for result in $RESULTS; do
+            [ "$result" = "success" ] || exit 1
+          done

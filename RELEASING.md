@@ -9,9 +9,10 @@
 ## Procedure
 
 1. Bump `version` in `plugin.json`, `.claude-plugin/plugin.json` and `.antigravity-plugin/plugin.json` in the same change as the content; update `CHANGELOG.md`. The Codex and Claude caches are keyed by `version`, so a new commit without a bump keeps the same cache path.
-2. Merge to `main` with green CI. A merge needs the owner's explicit approval.
-3. Create an annotated tag `vX.Y.Z` on the exact `main` SHA whose tree equals the validated candidate. Tags are never moved; a mistake gets a new PATCH release.
-4. Publish GitHub release notes from the `CHANGELOG.md` entry. Tagging and releasing need the owner's explicit approval.
+2. Merge to `main` with green CI, using a merge commit (it keeps the provenance commits). The status check `required` (an aggregate job in `.github/workflows/validate.yml` that fails unless the `pilot` and `claude-validate` jobs succeed) is the merge gate that the `main-required` ruleset names. A merge needs the owner's explicit approval.
+3. Verify before tagging: `git fetch`; `git diff --stat <approved PR head> origin/main` is empty; `git rev-parse origin/main^{tree}` equals the QA'd tree; CI on the `main` SHA is green, including `required`.
+4. Create an annotated tag on that exact `main` SHA and publish it: `git tag -a vX.Y.Z <main sha> -m "vX.Y.Z"`, `git push origin vX.Y.Z`, then `gh release create vX.Y.Z --verify-tag --notes-file <notes from the CHANGELOG entry>`. Tags are never moved; a mistake gets a new PATCH release. Tagging and releasing need the owner's explicit approval.
+5. Post-release smoke test (tag-form pins were never run): install by tag on Claude Code (`marketplace add jmartinlabs/agentic-harness-plugin#vX.Y.Z`, then install) and on Codex (`--ref vX.Y.Z`), and run the diagnostic on each. All client evidence so far is on 0.1.0 content, so this is also the first load of the released content.
 
 ## Consumers
 
