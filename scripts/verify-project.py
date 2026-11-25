@@ -7,6 +7,9 @@ from pathlib import Path
 
 COORDINATORS = ("claude", "codex", "opencode", "hermes")
 ARTIFACT = Path(__file__).resolve().parent.parent
+# Plugin-owned capabilities that a project should not shadow with local copies.
+PLUGIN_OWNED = (".agents/skills", ".agents/roles", ".claude/skills", ".claude/agents",
+                ".opencode/agents", "specs/methodology")
 
 
 def project_root(start):
@@ -44,6 +47,12 @@ def file_under(root, relative):
     return path
 
 
+def common_copies(root):
+    """Informational only: project paths that shadow plugin-owned capabilities."""
+    return [name for name in PLUGIN_OWNED
+            if (root / name).exists() or (root / name).is_symlink()]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project", type=Path, default=Path.cwd())
@@ -68,6 +77,7 @@ def main():
             "artifact_version": json.loads(manifest.read_text(encoding="utf-8"))["version"],
             "project_root": str(root),
             "project_rules": str(rules),
+            "common_copies_in_project": common_copies(root),
             "approval_policy": str(approvals),
             "qa_role": str(role),
             "coordinator_config_candidate": str(config) if config else None,

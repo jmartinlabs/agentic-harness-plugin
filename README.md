@@ -11,7 +11,7 @@ python3 -m unittest discover -s tests -v
 python3 scripts/verify-project.py --project tests/fixtures/a --coordinator claude
 ```
 
-The script inspects readiness and reports paths. It locates exactly the selected coordinator's existing v2 configuration as a candidate path when present. It does not parse v2, resolve model or effort, dispatch a worker, or establish what version the client loaded. The reported artifact version is local package metadata.
+The script inspects readiness and reports paths. It locates exactly the selected coordinator's existing v2 configuration as a candidate path when present. It also lists, informationally and without changing the exit code, project paths that shadow plugin-owned capabilities (`common_copies_in_project`). It does not parse v2, resolve model or effort, dispatch a worker, or establish what version the client loaded. The reported artifact version is local package metadata.
 
 ## Package paths and evidence
 

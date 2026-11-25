@@ -189,6 +189,19 @@ class PilotBoundaryTests(unittest.TestCase):
             with self.subTest(path=relative):
                 self.assertEqual(hashlib.sha256((ROOT / relative).read_bytes()).hexdigest(), digest)
 
+    def test_common_copies_report_is_informational(self):
+        a = self.projects / "a"
+        result = self.invoke(a)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["common_copies_in_project"], [])
+        (a / ".claude/agents").mkdir(parents=True)
+        (a / ".claude/agents/qa-review.md").write_text("local copy", encoding="utf-8")
+        (a / "specs/methodology").mkdir()
+        result = self.invoke(a)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["common_copies_in_project"],
+                         [".claude/agents", "specs/methodology"])
+
     def test_license_is_mit_and_declared(self):
         text = (ROOT / "LICENSE").read_text(encoding="utf-8")
         self.assertTrue(text.startswith("MIT License\n"))
