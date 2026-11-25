@@ -1,0 +1,8 @@
+{
+  "name": "agentic",
+  "version": "0.1.0",
+  "description": "Read-only Agentic Harness pilot for project readiness.",
+  "author": {
+    "name": "jmartinlabs"
+  }
+}
