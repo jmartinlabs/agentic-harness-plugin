@@ -15,7 +15,7 @@ The script inspects readiness and reports paths. It locates exactly the selected
 
 ## Package paths and evidence
 
-Status below is local and synthetic only. Sources are comments on [issue #77](https://github.com/jmartinlabs/agent-project-template/issues/77): 7165742456, 7166402182, 7166905791, 7167550781, 7167784394, 7167801822. Cited comments are the owner's record; this README does not restate their raw output.
+Status below is local and synthetic only. Sources are comments on [issue #77](https://github.com/jmartinlabs/agent-project-template/issues/77): 7165742456, 7166402182, 7166540941 (Codex handoff: Codex A/B update and rollback; its traces were re-verified by independent QA), 7166905791, 7167550781, 7167784394, 7167801822. Cited comments are the coordinators' records; this README does not restate their raw output.
 
 | Candidate surface | Packaging reference | Status | Current evidence (local, synthetic) |
 | --- | --- | --- | --- |
