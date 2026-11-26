@@ -6,7 +6,7 @@ Sub-issue [#34](https://github.com/jmartinlabs/agentic-harness-plugin/issues/34)
 
 | Campo | Valor |
 |---|---|
-| Estado | Consolidada; **pendiente de revisión externa**. No es una decisión arquitectónica aprobada |
+| Estado | Consolidada con la revisión externa; **pendiente de revisión conjunta**. No es una decisión arquitectónica aprobada ni autoriza implementar o probar |
 | Fecha de observación | 2026-11-26 |
 | Versiones | T3 Code 0.1.11 (Beta, macOS) · plugin 1.2.2 (1.2.1 en Claude Code y Antigravity) · Claude Code 2.1.330 · Codex CLI 0.172.0 · OpenCode 2.3.2 · Antigravity no registrada |
 | Coordinador usado | Claude Sonnet 5.5 dentro de T3 |
@@ -18,9 +18,12 @@ T3 completó una vez el ciclo implementación → QA → corrección → nueva Q
 de tres clientes, sin intervención humana tras la autorización. La adaptación usada fue solo texto
 en el mensaje de delegación.
 
-La orientación propuesta es: **T3 ejecuta y supervisa; Agentic Harness aporta método, roles, gates y
-evidencia**. Es apto para un piloto acotado. La fiabilidad no está demostrada: una ejecución por
+La orientación propuesta es: **T3 como motor de ejecución, delegación, comunicación, paralelismo y
+monitorización; Agentic Harness como fuente de metodología, instrucciones, skills, roles, permisos y
+gates**. T3 sería una opción de ejecución, no una dependencia obligatoria. Es apto para un piloto acotado. La fiabilidad no está demostrada: una ejecución por
 caso, tarea pequeña y sintética, y un solo cliente observado como coordinador.
+
+Es requisito del propietario no depender de Claude como coordinador (§9); eso todavía no está probado.
 
 ## 2. Método, evidencia y límites
 
@@ -30,9 +33,11 @@ caso, tarea pequeña y sintética, y un solo cliente observado como coordinador.
 | Inspección | Observado en disco, registros o código instalado, sin ejercitar el comportamiento | 4 |
 | Documentado | Esquema de herramientas o documentación oficial, sin ejercitar | 5 |
 | Hipótesis | Inferencia sin comprobar; se marca como tal donde aparece | — |
+| Revisión externa | Aportado por la revisión externa; no comprobado de forma independiente en esta investigación | 4.1, 7, 13 |
 
 - Fases: análisis de solo lectura; compatibilidad del plugin global; pruebas autorizadas 1–3;
-  propuesta de integración; análisis de cuotas; análisis de coordinador común.
+  propuesta de integración; análisis de cuotas; análisis de coordinador común; revisión arquitectónica
+  externa.
 - Las pruebas se hicieron sobre un repositorio sintético temporal.
 - Parte del análisis previo usa observaciones de unas pocas delegaciones triviales anteriores a las
   pruebas. No se reproducen sus registros.
@@ -44,8 +49,9 @@ caso, tarea pequeña y sintética, y un solo cliente observado como coordinador.
   consolidación se consultó su formato y quedaron visibles parte de las conclusiones de #20 y los
   encabezados de #21. No se ha incorporado contenido de ninguna.
 - Las evidencias originales se conservan localmente, fuera del repositorio. Este documento omite
-  identificadores de hilos y sesiones, rutas personales, datos de cuenta, cifras de cuota y todo
-  registro de otros proyectos. Un tercero no puede reproducir las observaciones solo con él.
+  identificadores de hilos y sesiones, rutas personales, datos de cuenta, porcentajes de cuota y todo
+  registro de otros proyectos. Las cifras agregadas de uso de §4.1 se incluyen por indicación expresa del
+  propietario. Un tercero no puede reproducir las observaciones solo con este documento.
 
 ## 3. Capacidades verificadas experimentalmente
 
@@ -132,6 +138,27 @@ Tokens según el registro de T3; la entrada incluye la caché. No hay coste mone
 | Consumo | La base local guarda tokens por turno; la caché agregada de uso incluía Claude, Codex, Grok y Pi, no OpenCode ni Antigravity |
 | Workflows | Documentados en la rama principal; ausentes en la versión instalada |
 
+### 4.1 Estadísticas observadas en la interfaz (revisión externa)
+
+Según la revisión externa, la interfaz de T3 ofrece de forma centralizada: tokens por cliente, modelo,
+sesión y turno; tokens de entrada y salida; lecturas desde caché; coste equivalente de API; evolución
+temporal; y número de sesiones.
+
+| Métrica observada | Valor |
+|---|---|
+| Tokens procesados | 368 millones |
+| Sesiones | 98 |
+| Coste equivalente estimado de API | 101,47 USD |
+| Lecturas desde caché | 94,3 % |
+
+Interpretación:
+
+- Es una instantánea; **no es necesariamente el consumo de las pruebas** de esta investigación.
+- El coste equivalente de API no es el coste real de las suscripciones.
+- Un coste ausente para DeepSeek **no significa consumo gratuito**.
+- Hydrogen mostraba un coste equivalente inferior a Neon y Sonnet, con tareas y proporciones de caché
+  distintas. **No es un benchmark comparable.**
+
 ## 5. Capacidades documentadas
 
 | Capacidad | Fuente |
@@ -151,33 +178,38 @@ Tokens según el registro de T3; la entrada incluye la caché. No hay coste mone
 | Limitación | Riesgo | Mitigación posible |
 |---|---|---|
 | Un trabajador puede asumir rol de coordinador: una delegación trivial anterior, sin cabecera de rol, se presentó así | Alto | Cabecera explícita de trabajador |
-| Restricciones solo por instrucción; hijos con acceso total | Alto | Verificación posterior; barrera de solo lectura fuera de T3 para riesgo alto |
+| Restricciones solo por instrucción; hijos con acceso total (aceptado por el propietario, R5) | Alto | Comprobar cumplimiento y registrar incumplimientos; sin mecanismos adicionales de aislamiento |
 | El worktree de T3 parte del commit del coordinador, no del trabajo del autor (documentado) | Alto | Fijar el SHA y comprobarlo |
 | Sin delegación a otro proyecto local | Medio | Abrir el coordinador en el proyecto de la entrega |
 | Verificación de modelo y esfuerzo depende de registros del cliente | Medio | Registrar «no verificado» |
-| Cuotas sin herramienta ni comando: solo caché interna no documentada, parcial por cliente | Medio | Tratarlas como orientativas |
-| Hermes y Antigravity no cargan el plugin en T3 de forma equivalente | Medio | Ruta en el mensaje (probado solo en Antigravity) o corregir configuración |
+| Cuotas: sin herramienta nativa de coordinación. Claude y Codex, accesibles por archivos internos; OpenCode, tokens sí y cuota no para la ruta usada; Antigravity, tokens sí y cuota todavía no; Hermes, cobertura incompleta | Medio | Consultar y registrar lo disponible; no desarrollar lectores ni adaptadores en el piloto |
+| Formatos internos de T3 que pueden cambiar entre versiones; producto en Beta | Medio | Repetir pruebas al actualizar; no depender de ellos |
+| Hermes y Antigravity no cargan el plugin en T3 de forma equivalente | Medio | Ruta en el mensaje (probado solo en Antigravity); no asumir carga automática de `orchestrate` |
 | La guía que inyecta T3 pide corregir uno mismo hallazgos pequeños; contradice al coordinador exclusivo | Medio | Declarar precedencia del Harness |
-| `update-agentic --check` revisa el directorio principal de Hermes, no otros perfiles | Bajo | Candidato a issue |
-| T3 en Beta; formatos internos y herramientas pueden cambiar | Medio | Repetir pruebas al actualizar |
-| El contexto del coordinador domina el consumo | Medio | Un coordinador nuevo por entrega |
+| `update-agentic --check` revisa el directorio principal de Hermes, no otros perfiles | Bajo | Candidato a issue, sin autorizar |
+| El contexto del coordinador domina el consumo | Medio | Medidas de §7.8; comprobar su efecto antes de imponerlas |
 | Estado de la entrega fuera de T3: no conoce gates ni fases | Medio | Git, Project `Status` y checkpoints |
 | Dependencia de un equipo encendido y de T3 en ejecución (hipótesis para delegaciones) | Medio | Probar recuperación |
 
 ## 7. Propuestas arquitectónicas
 
-**Ninguna está aprobada ni implementada.**
+**Ninguna está implementada. Salvo lo recogido como requisito en §9, todas están pendientes de
+aprobación.**
 
-### 7.1 Reparto de responsabilidades
+### 7.1 Arquitectura objetivo y responsabilidades
 
 | T3 | Agentic Harness |
 |---|---|
-| Sesiones, modelos, paralelismo, avisos | Cuándo y a quién delegar |
-| Worktrees y permisos | Propiedad de archivos y prohibiciones |
-| Registro de uso e interfaz | Evidencia PASS/FAIL/UNRUN y modelo solicitado frente a observado |
+| Ejecución, delegación, paralelismo | Metodología, instrucciones y skills |
+| Comunicación entre sesiones | Roles, permisos y reglas de delegación |
+| Worktrees y modos de permiso | Propiedad de archivos y prohibiciones |
+| Monitorización y consumo | Evidencia PASS/FAIL/UNRUN y modelo solicitado frente a observado |
 | Programación y vigilancia de PR | Gates, aprobaciones y merge humano |
 
-Sin demonio, cola, panel ni adaptador de código propios.
+- T3 es una opción de ejecución; el plugin no pasa a depender de él.
+- No desarrollar runtime, MCP, sistema de comunicación ni interfaz de monitorización propios cuando T3
+  cubra la necesidad. Tampoco demonio, cola ni adaptador de código.
+- Mantener la compatibilidad con los clientes usados fuera de T3.
 
 ### 7.2 Activación del coordinador con cualquier cliente
 
@@ -200,19 +232,43 @@ Rutas (rol: cliente, modelo, esfuerzo): …
 Tarea y alcance autorizado: …
 ```
 
+- La activación con un mensaje manual corto es aceptable para el propietario; las instrucciones completas
+  permanecen en Agentic Harness, sin duplicarlas (R3, R4).
 - Los puntos 2–4 serían provisionales hasta que exista una sección «T3 Code» en la metodología.
 - La raíz única **sustituye** a una propuesta anterior de usar la raíz propia de cada cliente (que es
   la que se probó). La lectura de la raíz compartida por Codex y Antigravity está sin probar.
 - Solo Claude está observado como coordinador.
 - Descartado: duplicar instrucciones en los archivos globales de cada cliente.
 
+Activación y mantenimiento del plugin:
+
+- Reutilizar la instalación global y mantener `update-agentic` como actualización; sin segunda
+  instalación para T3.
+- Priorizar la instalación compartida y **comprobar que todos los clientes pueden leerla**. Antigravity
+  ya accedió a roles y skills mediante ruta explícita, desde su propia instalación.
+- No asumir que todos los clientes cargan `orchestrate` automáticamente.
+- No modificar hooks hasta demostrar que hace falta.
+- No usar `T3CODE_THREAD_ID` para identificar trabajadores sin verificar que distingue ambos tipos de
+  sesión; solo se observó en una sesión coordinadora.
+- Evitar instrucciones generales en `AGENTS.md` que conviertan a todos los trabajadores en coordinadores.
+- Tener presente el margen mínimo de tamaño de `orchestrate`.
+
 ### 7.3 Selección por rol y dificultad
 
 - La configuración v2 no expresa qué cliente usar por rol, usa alias que no coinciden con el catálogo
   de T3 y mantiene un archivo por coordinador.
 - Piloto: rutas explícitas de la persona propietaria en el mensaje o en la Issue.
-- Después: un único `.agents/harnesses/t3.json` con el esquema v2 más el campo `client` en los
-  perfiles, válido para cualquier coordinador. Requiere soporte en `validate-core` antes de crearlo.
+- Propuesta: un único `.agents/harnesses/t3.json` por proyecto, independiente del coordinador,
+  reutilizando el esquema v2 tanto como sea posible. **Es distinto del `t3.json` nativo de T3**, que está
+  en la raíz del repositorio y no configura modelos.
+- Seleccionaría cliente, proveedor, modelo y esfuerzo por rol y dificultad.
+- Admitiría alternativas expresamente preautorizadas, en orden. Sin sustituciones silenciosas, sin
+  contratar APIs ni activar pagos adicionales.
+- La necesidad real de cambios en el validador se evaluará después del piloto. Hecho comprobado en el
+  código: el validador actual rechazaría ese nombre de archivo y los campos nuevos, así que no debe
+  crearse en un proyecto sin ese soporte.
+
+Forma ilustrativa; los nombres de `provider` y `alternatives` están por definir:
 
 ```json
 {
@@ -220,8 +276,11 @@ Tarea y alcance autorizado: …
   "local": {
     "profiles": {
       "qa-review": {
-        "standard": { "client": "<cliente>", "model": "<modelo>", "effort": "<nivel>" },
-        "complex":  { "client": "<cliente>", "model": "<modelo>", "effort": "<nivel>" }
+        "standard": {
+          "client": "<cliente>", "provider": "<proveedor>", "model": "<modelo>", "effort": "<nivel>",
+          "alternatives": [ { "client": "<cliente>", "provider": "<proveedor>", "model": "<modelo>", "effort": "<nivel>" } ]
+        },
+        "complex": { "client": "<cliente>", "provider": "<proveedor>", "model": "<modelo>", "effort": "<nivel>" }
       }
     }
   }
@@ -264,13 +323,27 @@ subagentes nativos y [CLI externo](../methodology/dynamic-agents-external-client
 
 ### 7.6 Cuotas
 
-- Consultar y registrar las cuotas disponibles antes de delegar y avisar al superar un umbral
-  (punto de partida: 85 % de sesión o 90 % semanal). Dato ausente o con más de 10 minutos:
-  desconocido, sin cambios por suposición.
-- Cambio de ruta solo entre alternativas aprobadas de antemano; nunca créditos ni pagos adicionales.
-- Recomendación para el piloto: **sin cambio automático**.
-- Cualquier cambio de ruta exige consentimiento explícito: hoy
-  [orchestrate](../skills/orchestrate/SKILL.md) prohíbe cambiar a una ruta con otro coste sin él.
+Política propuesta por la revisión externa, que la identifica como la actual de Agentic Harness:
+
+| Cuota restante | Comportamiento |
+|---|---|
+| Más del 25 % | Funcionamiento normal |
+| 25 % o menos | No asignar nuevas tareas al proveedor |
+| 5 % o menos | Cierre seguro y handoff |
+| Desconocida | Mantener la ruta configurada y gestionar los errores que aparezcan |
+
+- Se aplica el límite más restrictivo entre sesión y semana.
+- Las alternativas expresamente preautorizadas pueden usarse sin pedir permiso adicional.
+- Nunca usar automáticamente créditos de reinicio, activar pagos adicionales ni contratar APIs.
+- En el piloto: consultar y registrar lo disponible, sin desarrollar lectores ni adaptadores.
+
+Contraste con el repositorio: **estos umbrales no se localizaron** en las skills, metodología, roles,
+plantillas ni scripts del plugin 1.2.2. [orchestrate](../skills/orchestrate/SKILL.md) exige respetar los
+límites reales, detener lo afectado y no cambiar a una ruta con otro coste sin consentimiento explícito;
+una preautorización expresa sería compatible con esto. Queda por confirmar dónde está definida la
+política (D8).
+
+Sustituye la propuesta anterior de umbrales sobre porcentaje usado (85 % y 90 %) sin cambio automático.
 
 ### 7.7 Cambios futuros previstos
 
@@ -279,74 +352,152 @@ subagentes nativos y [CLI externo](../methodology/dynamic-agents-external-client
 | `methodology/dynamic-agents-external-clients.md` | Sección «T3 Code» |
 | `templates/agent-work-packet.md` | Cabecera de trabajador, lectura inicial y SHA |
 | `methodology/dynamic-agents.md` | Referencia a la sección y a las rutas |
-| `scripts/validate-core` y pruebas | Nombre `t3` y campo `client` |
+| `scripts/validate-core` y pruebas | Soporte del archivo `t3` y sus campos; necesidad a evaluar tras el piloto |
 | Procedencia, changelog y manifiestos | Hashes y versión |
 
 Restricciones: `orchestrate` está a 25 bytes de su límite, así que no conviene ampliarlo; un archivo
 nuevo en `methodology/` exige registro de procedencia, por eso se amplían los existentes.
 
+### 7.8 Consumo y eficiencia
+
+La eficiencia del coordinador importa tanto como la de los trabajadores: en el ciclo medido, cuatro
+turnos intermedios del coordinador sumaron unos 3,5 millones de tokens de entrada, principalmente en
+caché, frente a unos 822.000 de los trabajadores del ciclo (89.000 sin caché) y 15.000 de salida.
+
+A evaluar:
+
+- Mensajes de delegación compactos.
+- Carga de skills bajo demanda.
+- No incorporar investigaciones completas al contexto operativo.
+- Reutilizar trabajadores cuando aporte valor.
+- Handoff y sesiones nuevas tras hitos relevantes.
+- Diferenciar tokens procesados, tokens nuevos, caché y coste efectivo.
+- Modelos económicos para coordinación y QA cuando su calidad baste.
+
+**No imponer una sesión nueva por entrega sin comprobar que mejora la eficiencia.** Esto sustituye la
+recomendación anterior de abrir siempre un coordinador nuevo.
+
+### 7.9 Seguimiento centralizado del consumo
+
+Evaluar si las estadísticas de T3 sustituyen total o parcialmente el seguimiento propio del plugin. No
+desarrollar otra recopilación si las capacidades existentes bastan.
+
+| Criterio | Lo observado hasta ahora | Estado |
+|---|---|---|
+| Cobertura por proveedor | Tokens por turno en Claude, Codex, OpenCode y Antigravity; incompletos en Hermes; la revisión externa vio coste de Antigravity en la interfaz | Por comprobar |
+| Sesiones fuera de T3 | La documentación indica que agrega historiales de varios clientes | Por comprobar |
+| Persistencia histórica | Documentados 92 días por defecto, configurables | Documentado |
+| Exportación | No se investigó | Pendiente |
+| Acceso programático | Sin herramienta ni comando de coordinación; base y caché internas | Limitado |
+| Fiabilidad | No evaluada | Pendiente |
+| Dependencia de formatos internos | Toda lectura hecha aquí dependió de ellos | Riesgo |
+
+### 7.10 Roles y restricciones
+
+El propietario acepta restricciones establecidas por las instrucciones del coordinador. La falta de
+sandbox o de bloqueo de escritura no es bloqueante y no se desarrollarán mecanismos de aislamiento.
+
+Sí debe comprobarse el cumplimiento efectivo. Los incumplimientos se registran y su tratamiento se
+decide después.
+
+| Comprobación | En las pruebas 1–3 |
+|---|---|
+| Rol asignado | Cumplido |
+| Alcance autorizado | Cumplido en lo registrado |
+| Prohibiciones | Cumplidas en lo registrado |
+| Independencia de QA | Cumplida; la segunda QA conocía el defecto previo |
+| Commit candidato exacto | Cumplido |
+| Corrección por el ejecutor original | Cumplida |
+| Coordinador sin trabajo técnico | Cumplido en el ciclo, salvo preparar el repositorio sintético y verificar evidencias. Antes del ciclo, el coordinador investigó directamente por la restricción de no lanzar trabajadores |
+
 ## 8. Impacto potencial sobre P2–P6
 
-No se cierran ni modifican esas Issues.
+No se cierran, cancelan ni modifican esas Issues hasta concluir la evaluación. P1 se mantiene: el
+coordinador solo coordina.
 
 | Fase | Lo que podría aportar T3 | Evidencia | Seguiría en el Harness | Orientación propuesta |
 |---|---|---|---|---|
-| [P2 · #23](https://github.com/jmartinlabs/agentic-harness-plugin/issues/23) equipos y reutilización | Crear, paralelizar, reutilizar, cancelar | Tres primeras experimentales; cancelar documentado | Criterio de reutilización, un ejecutor por tarea, parada confirmada | Sustituir motor por reglas |
-| [P3 · #24](https://github.com/jmartinlabs/agentic-harness-plugin/issues/24) comunicación | Mensajes entre hilos y avisos | Coordinador↔trabajador experimental; entre trabajadores sin probar | Autoridad: un mensaje no autoriza | No construir canal; relé por coordinador |
-| [P4 · #25](https://github.com/jmartinlabs/agentic-harness-plugin/issues/25) modelo y esfuerzo | Selección por delegación | Experimental en tres clientes | Rutas y solicitado frente a observado | Usar selección nativa; definir rutas |
-| [P5 · #26](https://github.com/jmartinlabs/agentic-harness-plugin/issues/26) jerarquía | Linaje de hilos | Sin probar | Límites de autoridad y profundidad | Aplazar; mantener sin subdelegación |
-| [P6 · #27](https://github.com/jmartinlabs/agentic-harness-plugin/issues/27) supervisión visual | Panel de agentes, uso y límites | Documentado; interfaz no revisada | Rol, veredicto y SHA en el cierre | No construir; confirmar suficiencia en piloto |
+| [P2 · #23](https://github.com/jmartinlabs/agentic-harness-plugin/issues/23) equipos y reutilización | Crear, paralelizar, reutilizar, cancelar | Tres primeras experimentales; cancelar documentado | Criterio de reutilización, un ejecutor por tarea, parada confirmada | Simplificar con reglas y capacidades nativas |
+| [P3 · #24](https://github.com/jmartinlabs/agentic-harness-plugin/issues/24) comunicación | Mensajes entre hilos y avisos | Coordinador↔trabajador experimental; directa entre trabajadores no acreditada | Autoridad: un mensaje no autoriza | Usar T3; coordinador como relé |
+| [P4 · #25](https://github.com/jmartinlabs/agentic-harness-plugin/issues/25) modelo y esfuerzo | Selección por delegación | Experimental en tres clientes | Rutas y solicitado frente a observado | Mantener selección declarativa de cliente, modelo y esfuerzo |
+| [P5 · #26](https://github.com/jmartinlabs/agentic-harness-plugin/issues/26) jerarquía | Linaje de hilos | Sin probar | Límites de autoridad y profundidad | Aplazar hasta demostrar necesidad |
+| [P6 · #27](https://github.com/jmartinlabs/agentic-harness-plugin/issues/27) supervisión visual | Interfaz, agentes, uso y consumo | Documentado; consumo observado por la revisión externa | Rol, veredicto y SHA en el cierre | Aprovechar la interfaz de T3 |
 
 Esta sustitución solo vale dentro de T3. Fuera de él, cada cliente conserva sus límites.
 
-## 9. Decisiones aprobadas
+## 9. Requisitos y decisiones del propietario
 
-Decisiones expresas de la persona propietaria el 2026-11-26. Ninguna aprueba la arquitectura de §7.
+Expresados el 2026-11-26. No aprueban la arquitectura de §7 ni autorizan implementar o probar.
 
-| # | Decisión | Alcance |
-|---|---|---|
-| A1 | Los resultados bastan para avanzar hacia un piloto real | Dirección; no autoriza aún el piloto |
-| A2 | Revisar una propuesta antes de nuevas pruebas o modificaciones; después, piloto con una issue real | Orden de trabajo |
-| A3 | Priorizar una solución declarativa que reutilice la instalación global y no duplique instrucciones | Requisito de diseño |
-| A4 | Poder convertir en coordinadora una conversación con cualquier cliente y modelo compatible, con interés en Claude, Codex, OpenCode y Antigravity Hydrogen | Requisito |
-| A5 | En las pruebas 1–3, la falta de sandbox no era bloqueo y las restricciones se evaluaban como instrucciones | Solo esas pruebas |
-| A6 | Mantener la entrada de confianza que Codex añadió para este repositorio | Configuración local |
-| A7 | Consolidar esta investigación y completarla con una revisión externa antes de continuar con el piloto | Estado actual |
+### 9.1 Requisitos expresos
+
+| # | Requisito |
+|---|---|
+| R1 | Poder seleccionar cualquier cliente y modelo compatible como coordinador dentro de T3; interés en Antigravity Hydrogen, OpenCode DeepSeek, Codex y Claude Code |
+| R2 | No depender de Claude como coordinador |
+| R3 | La activación mediante un mensaje manual corto es aceptable |
+| R4 | Las instrucciones completas permanecen en Agentic Harness, sin duplicarlas; solución declarativa que reutilice la instalación global |
+| R5 | Se aceptan restricciones por instrucciones; la falta de sandbox o de bloqueo de escritura no es criterio bloqueante en esta evaluación (antes limitado a las pruebas 1–3) |
+| R6 | Mantener la compatibilidad con los clientes actuales y no contratar APIs externas |
+
+### 9.2 Decisiones de proceso
+
+| # | Decisión |
+|---|---|
+| A1 | Los resultados bastan para avanzar hacia un piloto real; no autoriza aún el piloto |
+| A2 | Revisar la propuesta antes de nuevas pruebas o modificaciones; después, piloto con una issue real |
+| A3 | Mantener la entrada de confianza que Codex añadió para este repositorio |
+| A4 | Consolidar la investigación, con la revisión externa, antes de continuar con el piloto |
 
 ## 10. Decisiones pendientes
 
 | # | Decisión | Recomendación actual |
 |---|---|---|
-| D1 | Ruta que fija un cliente y no está disponible: ¿detener o heredar? | Detener, como excepción explícita a la regla v2 |
-| D2 | ¿Archivo común `t3.json` o rutas en cada archivo por coordinador? | Archivo común |
-| D3 | ¿Mensaje de arranque como activación, o línea automática en las instrucciones de cada proyecto? | Mensaje |
-| D4 | ¿Raíz de instrucciones única o por cliente? | Única, si la prueba la confirma |
-| D5 | ¿Probar coordinadores Codex, OpenCode y Antigravity antes del piloto? | Antes. Reemplaza la recomendación previa de pilotar primero con Claude |
-| D6 | ¿Pilotar antes de modificar el plugin? | Sí |
-| D7 | Issue del piloto | Aviso de perfiles Hermes sin skills en `update-agentic --check`; por crear |
-| D8 | Política de cuotas: umbrales, alternativas y automatismo | Consultar y avisar |
+| D1 | Ruta no disponible sin alternativa preautorizada: ¿detener o heredar? | Detener; sin sustituciones silenciosas |
+| D2 | Archivo `.agents/harnesses/t3.json` y su esquema (proveedor, alternativas) | Archivo único basado en v2 |
+| D3 | Texto definitivo del mensaje de arranque | El de §7.2, compacto |
+| D4 | Raíz de instrucciones compartida | Priorizarla y comprobar que todos la leen |
+| D5 | Orden de validación | El de §11 |
+| D6 | Momento de modificar el plugin | Después de validar y pilotar |
+| D7 | Issue del piloto | De bajo riesgo. Candidata: aviso de perfiles Hermes sin skills en `update-agentic --check`; sin autorizar ni crear |
+| D8 | Política de cuotas de §7.6 y su fuente | Mantenerla como propuesta y confirmar su origen |
 | D9 | Reglas de proyecto de este repositorio, ausentes para `verify-project` | Registrar la limitación en el piloto |
 | D10 | Alcance de soporte para Hermes y Antigravity | Antigravity por ruta; Hermes después |
-| D11 | Comparación con #18–#21 y efecto en #23–#27 | Tras la revisión conjunta, en #17 |
+| D11 | Sustituir total o parcialmente el seguimiento propio de uso | Decidir tras comprobar §7.9 |
+| D12 | Política de sesiones del coordinador | Medir antes de imponer sesiones nuevas |
+| D13 | Cambios mínimos que necesita Agentic Harness | Tras las validaciones |
+| D14 | Comparación con #18–#21 y efecto en #23–#27 | Tras la revisión conjunta, en #17 |
 
-## 11. Pruebas pendientes
+## 11. Validaciones y pruebas pendientes
 
-Requieren autorización y consumen cuota.
+Ninguna está autorizada. La mayoría consume cuota. La prueba real debe hacerse desde una sesión abierta
+en el proyecto correspondiente.
 
-| # | Prueba | Criterio |
+### 11.1 Prioridad propuesta
+
+| Orden | Validación | Criterio |
 |---|---|---|
-| T1 | Coordinadores Codex, OpenCode y Antigravity con el mensaje de arranque | Leen la raíz común, delegan por T3, no ejecutan trabajo técnico y se reactivan |
-| T2 | Piloto con una issue real y coordinador en hilo nuevo | Solo intervención en gates; QA sobre SHA correcto; consumo medido |
-| T3 | Claude como trabajador; efecto del hook | Actúa como trabajador |
-| T4 | Reutilización de un trabajador Codex | Conserva contexto |
-| T5 | Cancelación, reinicio de T3 y suspensión del equipo | Estado correcto, sin duplicados |
-| T6 | Error de cuota observado cuando ocurra, sin provocarlo | Se detiene lo afectado sin sustitución no aprobada |
-| T7 | Modos con aprobación | Se conoce qué bloquea cada uno |
-| T8 | Permisos de `qa` y `review` de OpenCode bajo T3 | Las denegaciones se aplican |
-| T9 | Carga automática del `AGENTS.md` del proyecto de entrega, incluido Antigravity | Presente en contexto |
-| T10 | Hermes con las skills disponibles; hooks de Codex | Carga confirmada |
-| T11 | Escritores concurrentes y tarea de mayor tamaño | Sin interferencias |
-| T12 | Ruta con cuota y frescura del dato | Dato actualizado o marcado desconocido |
+| 1 | Coordinador Antigravity Hydrogen | Lee la instalación compartida, delega por T3, no ejecuta trabajo técnico y se reactiva |
+| 2 | Coordinador OpenCode DeepSeek | Igual |
+| 3 | Coordinador Codex | Igual |
+| 4 | Piloto con una issue real de bajo riesgo | Intervención solo en gates; QA sobre el SHA correcto; restricciones comprobadas; consumo y cuotas registrados |
+| 5 | Configuración declarativa definitiva | Esquema y necesidad de cambios en el validador |
+| 6 | Recuperación tras interrupciones y agotamiento de cuota | Estado correcto, sin duplicados ni sustituciones no autorizadas; sin provocar el agotamiento |
+| 7 | Cambios mínimos de Agentic Harness | Decisión, no prueba |
+
+### 11.2 Otras pendientes
+
+| Prueba | Criterio |
+|---|---|
+| Claude como trabajador y efecto del hook | Actúa como trabajador |
+| Reutilización de un trabajador Codex | Conserva contexto |
+| Modos con aprobación | Se conoce qué bloquea cada uno |
+| Permisos de `qa` y `review` de OpenCode bajo T3 | Se conoce si las denegaciones se aplican |
+| Carga del `AGENTS.md` del proyecto, incluido Antigravity | Presente en contexto |
+| Hermes con las skills disponibles; hooks de Codex | Carga confirmada |
+| Escritores concurrentes y tarea de mayor tamaño | Sin interferencias |
+| Seguimiento de consumo (§7.9) | Criterios respondidos |
+| Efecto de las medidas de eficiencia (§7.8) | Comparación con consumo medido |
 
 ## 12. Correcciones registradas durante la investigación
 
@@ -355,9 +506,28 @@ Requieren autorización y consumen cuota.
 | El trabajador OpenCode no tenía agente ni constaba su carga de instrucciones | Una sesión previa recibió instrucciones de proyecto y las 13 skills, con el agente `build` |
 | La falta de skills en una sesión Codex antigua era una diferencia entre proyectos | Probablemente el plugin aún no estaba instalado (hipótesis) |
 | El esfuerzo efectivo quedaría sin verificar en general | Verificado en registros de OpenCode, Codex y Antigravity |
-| Recomendación de pilotar primero con coordinador Claude | El requisito A4 lleva a recomendar probar antes los demás coordinadores (D5) |
+| Recomendación de pilotar primero con coordinador Claude | R1 y R2: validar antes los demás coordinadores (§11) |
+| La caché agregada sin OpenCode ni Antigravity sugería falta de cobertura | La revisión externa vio coste de Antigravity en la interfaz; la caché inspeccionada no basta para deducir la cobertura |
 
 ## 13. Revisión externa
 
-Pendiente. Aquí se añadirán sus conclusiones, indicando cuáles cambian propuestas, decisiones o
-pruebas.
+Incorporada el 2026-11-26. Procede de la revisión arquitectónica aportada por el propietario. No se han
+hecho pruebas nuevas para verificarla.
+
+| Tema de la revisión | Dónde está | Efecto sobre lo anterior |
+|---|---|---|
+| Arquitectura objetivo | §1, §7.1 | T3 queda como opción, no dependencia |
+| Coordinador intercambiable | §7.2, R1–R4 | No depender de Claude; mensaje manual aceptable |
+| Configuración de modelos | §7.3, D2 | Añade proveedor y alternativas; el validador se evalúa tras el piloto |
+| Consumo y eficiencia | §4.1, §7.8, D12 | Retira la obligación de un coordinador nuevo por entrega |
+| Seguimiento centralizado | §7.9, D11 | Línea de evaluación nueva |
+| Cuotas | §6, §7.6, D8 | Sustituye umbrales y automatismo; origen de la política por confirmar |
+| Roles y restricciones | §7.10, R5 | Retira mitigaciones que añadían barreras técnicas |
+| Activación y mantenimiento | §7.2 | Añade cautelas sobre hooks, identificación y `AGENTS.md` |
+| Roadmap | §8 | Incluye P1; P2–P6 siguen abiertas |
+| Validaciones | §11 | Orden: Antigravity, OpenCode, Codex, piloto, configuración, recuperación, cambios |
+| Estado de decisiones | §9, §10 | Separa requisitos expresos de recomendaciones |
+
+Criterio de clasificación: en §9.1 solo figura lo que el propietario formuló como requisito, aceptación o
+restricción propia. El resto de la revisión se recoge como propuesta pendiente, aunque esté redactado en
+imperativo.
