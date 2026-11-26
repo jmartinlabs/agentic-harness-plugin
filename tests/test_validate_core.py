@@ -246,6 +246,32 @@ class PluginCase(unittest.TestCase):
         path.write_text(path.read_text().replace("DEFAULT_AGENTS", "OTHER_AGENTS", 1))
         self.assertRule(root, "agent-catalogue")
 
+    def test_secret_scan_detects_tokens_and_keys(self):
+        root = self.fixture()
+        (root / "README.md").write_text("token = ghp_1234567890abcdefghij123456\n", encoding="utf-8")
+        self.assertRule(root, "secrets")
+
+    def test_neutrality_scan_detects_local_user_paths(self):
+        root = self.fixture()
+        (root / "README.md").write_text("see /Users/alice/projects/foo\n", encoding="utf-8")
+        self.assertRule(root, "neutrality")
+
+    def test_git_diff_check_detects_whitespace_errors(self):
+        root = self.fixture()
+        subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+        subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=root, check=True)
+        subprocess.run(["git", "config", "user.name", "Test"], cwd=root, check=True)
+        subprocess.run(["git", "add", "README.md"], cwd=root, check=True)
+        subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=root, check=True)
+        (root / "README.md").write_text("trailing whitespace   \n", encoding="utf-8")
+        self.assertRule(root, "git-diff")
+
+    def test_required_phrases_drift_is_detected(self):
+        root = self.fixture()
+        path = root / "roles" / "implementation.md"
+        path.write_text(path.read_text(encoding="utf-8").replace("$task", "$other"), encoding="utf-8")
+        self.assertRule(root, "required-phrases")
+
 
 class IndependentCoverage(PluginCase):
     """Direct checks of the shared helpers' effects, without the test_plugin helpers."""

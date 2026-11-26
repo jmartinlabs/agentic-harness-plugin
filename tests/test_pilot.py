@@ -198,6 +198,7 @@ class PilotBoundaryTests(unittest.TestCase):
         (a / ".claude/agents").mkdir(parents=True)
         (a / ".claude/agents/qa-review.md").write_text("local copy", encoding="utf-8")
         (a / "specs/methodology").mkdir()
+        (a / "specs/methodology/project-local-notes.md").write_text("project file", encoding="utf-8")
         (a / ".codex").mkdir()
         (a / ".codex/hooks.json").write_text("{}", encoding="utf-8")
         (a / "templates").mkdir()
@@ -205,7 +206,8 @@ class PilotBoundaryTests(unittest.TestCase):
         result = self.invoke(a)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)["plugin_owned_paths_in_project"],
-                         [".claude/agents", ".codex/hooks.json", "specs/methodology"])
+                         [".claude/agents", ".codex/hooks.json"])
+        (a / "specs/methodology/approvals.md").write_text("local copy", encoding="utf-8")
         (a / "templates/issue.md").write_text("local copy", encoding="utf-8")
         result = self.invoke(a)
         self.assertEqual(result.returncode, 0, result.stderr)

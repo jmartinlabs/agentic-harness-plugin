@@ -23,6 +23,7 @@ of re-deriving its rules. `@work-issue opencode` asks the agent to run one sessi
 
 ## Inputs
 
+- Read `AGENTS.md` and `specs/project-rules.md` (when present) before acting on any gate.
 - A request to take work (`work-issue`, `@work-issue opencode`, "take a Ready Issue"), `--repo OWNER/NAME`,
   optionally `--project N` and `--owner ORG`, and the agent identity: the client actually running the
   orchestration (`claude` in Claude Code, `codex`, `hermes`, `opencode`), never a role and never another
