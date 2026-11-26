@@ -447,6 +447,25 @@ class UpdateAgenticTests(unittest.TestCase):
             # Non-directory entry under profiles/ should be ignored
             (hermes_home / "profiles" / ".DS_Store").write_text("", encoding="utf-8")
 
+            # Hidden profile directory without skills/ -> should be reported
+            hidden_prof = hermes_home / "profiles" / ".hidden-prof"
+            hidden_prof.mkdir(parents=True, exist_ok=True)
+
+            # Profile linked to ANOTHER checkout with "agentic-harness-plugin" in the path -> reported
+            other_checkout_skill = Path(tmp) / "other" / "agentic-harness-plugin" / "skills" / "verify-project"
+            other_checkout_skill.mkdir(parents=True, exist_ok=True)
+            other_co_skills = hermes_home / "profiles" / "other-checkout" / "skills"
+            other_co_skills.mkdir(parents=True, exist_ok=True)
+            (other_co_skills / "verify-project").symlink_to(other_checkout_skill)
+
+            # Symlink inside shared_repo but outside skills/ -> reported
+            outside_skills = shared_repo / "roles"
+            outside_skills.mkdir(parents=True, exist_ok=True)
+            (outside_skills / "implementation.md").write_text("# role\n", encoding="utf-8")
+            non_skill_link_dir = hermes_home / "profiles" / "non-skill-link" / "skills"
+            non_skill_link_dir.mkdir(parents=True, exist_ok=True)
+            (non_skill_link_dir / "implementation.md").symlink_to(outside_skills / "implementation.md")
+
             before_tree = sorted(str(p.relative_to(hermes_home)) for p in hermes_home.rglob("*"))
 
             def forbid_runner(cmd, cwd, timeout):
@@ -464,14 +483,20 @@ class UpdateAgenticTests(unittest.TestCase):
             hermes_res = by_name["hermes"]
             self.assertEqual(hermes_res.status, "installed")
             self.assertEqual(hermes_res.version_before, "1.2.2")
+            self.assertIn("profiles without shared-checkout plugin skills:", hermes_res.detail)
             self.assertIn("engineering-lead", hermes_res.detail)
             self.assertIn("external-link", hermes_res.detail)
+            self.assertIn("other-checkout", hermes_res.detail)
+            self.assertIn("non-skill-link", hermes_res.detail)
+            self.assertIn(".hidden-prof (missing skills/)", hermes_res.detail)
             self.assertIn("no-skills-prof (missing skills/)", hermes_res.detail)
             self.assertNotIn("good-profile", hermes_res.detail)
             self.assertNotIn(".DS_Store", hermes_res.detail)
 
             report = format_report(results, check_only=True)
+            self.assertIn("profiles without shared-checkout plugin skills:", report)
             self.assertIn("engineering-lead", report)
+            self.assertIn(".hidden-prof (missing skills/)", report)
             self.assertIn("no-skills-prof (missing skills/)", report)
             self.assertNotIn("good-profile", report)
 
@@ -480,6 +505,24 @@ class UpdateAgenticTests(unittest.TestCase):
             self.assertEqual(before_tree, after_tree)
             self.assertFalse((no_skills_prof / "skills").exists())
             self.assertEqual(cfg_file.read_text(encoding="utf-8"), "model: default\n")
+
+    def test_hermes_absent_shared_repo_with_profiles_skips_profile_warning(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            shared_repo = home / ".local" / "share" / "agentic-harness-plugin"  # does not exist
+            hermes_home = home / ".hermes"
+            (hermes_home / "profiles" / "engineering-lead" / "skills" / "work-issue").mkdir(parents=True)
+
+            results = run_all(
+                check_only=True,
+                home=home,
+                env={"AGENTIC_SHARED_REPO": str(shared_repo), "HERMES_HOME": str(hermes_home)},
+                runner=lambda *_: (_ for _ in ()).throw(AssertionError("unexpected call")),
+                which=lambda _name: None,
+            )
+            by_name = {r.harness: r for r in results}
+            self.assertEqual(by_name["hermes"].status, "not-installed")
+            self.assertEqual(by_name["hermes"].detail, "no agentic symlinks found")
 
     def test_hermes_without_profiles_preserves_existing_result_and_exit_code(self):
         with tempfile.TemporaryDirectory() as tmp:
