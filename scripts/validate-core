@@ -285,21 +285,32 @@ def check_provenance(root):
 
 
 def check_hook(root):
+    codex_usage = {"type": "command", "command": 'python3 "${PLUGIN_ROOT}/scripts/auto-agent-usage"', "timeout": 3}
     configs = {
-        "hooks/hooks.json": 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/session-start.py" --claude',
-        "hooks/codex.json": 'python3 "${PLUGIN_ROOT}/hooks/session-start.py"',
+        "hooks/hooks.json": {
+            "SessionStart": {"type": "command", "command": 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/session-start.py" --claude'},
+        },
+        "hooks/codex.json": {
+            "SessionStart": {"type": "command", "command": 'python3 "${PLUGIN_ROOT}/hooks/session-start.py"'},
+            "Stop": codex_usage,
+            "SubagentStop": codex_usage,
+            "SessionEnd": codex_usage,
+        },
     }
     errors = []
     if (root / "plugin.json").exists():
         errors.append("hook: portable plugin.json takes precedence and suppresses native hooks in Codex 0.172.0")
-    for name, command in configs.items():
+    for name, expected in configs.items():
         try:
             config = load_json(root / name)
-            (group,) = config["hooks"]["SessionStart"]
-            (hook,) = group["hooks"]
-            if (list(config) != ["hooks"] or list(config["hooks"]) != ["SessionStart"]
-                    or hook != {"type": "command", "command": command}):
-                errors.append(f"hook: unexpected SessionStart configuration in {name}")
+            if list(config) != ["hooks"] or list(config["hooks"]) != list(expected):
+                errors.append(f"hook: unexpected hook configuration in {name}")
+                continue
+            for event, expected_hook in expected.items():
+                (group,) = config["hooks"][event]
+                (hook,) = group["hooks"]
+                if hook != expected_hook:
+                    errors.append(f"hook: unexpected {event} configuration in {name}")
         except (OSError, ValueError, KeyError, TypeError) as error:
             errors.append(f"hook: {name}: {error}")
     try:
