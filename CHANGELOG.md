@@ -2,6 +2,15 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/), see [RELEASING.md](RELEASING.md).
 
+## [1.2.1] - 2026-11-26
+
+### Changed
+- Coordinator exclusively coordinates across all five harnesses: delegates all technical work including Quick tasks (using one bounded worker with a compact packet), preserves proactive look-ahead, required independent QA, approvals, and v2 configuration, and reports a blocker instead of falling back to coordinator technical execution when no authorized usable worker is available (#22, PR #28).
+- Added static consistency checks (`CoordinatorDelegationTests`) in `tests/test_plugin.py` and kept `skills/orchestrate/SKILL.md` within the 8704-byte hook budget (8679 bytes).
+
+### Known limitations
+- Live end-to-end client behavioral traces across Antigravity, Claude Code, Codex, OpenCode, and Hermes remain unrun due to quota restrictions.
+
 ## [1.2.0] - 2026-11-26
 
 Release candidate. Merge, tag and release need the owner's explicit approval.
