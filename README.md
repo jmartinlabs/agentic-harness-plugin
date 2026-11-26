@@ -1,4 +1,4 @@
-# Agentic Harness Plugin (`v1.2.1`)
+# Agentic Harness plugin
 
 The `agentic` plugin supplies shared skills, roles, methodology, templates and tools from one marketplace, `agentic-harness`. Each project keeps its own rules (`specs/project-rules.md`), v2 harness configuration (`.agents/harnesses/<coordinator>.json`) and application files.
 
@@ -45,16 +45,18 @@ Antigravity installs globally under `$HOME/.gemini/config/plugins/agentic` from 
 
 ### OpenCode
 
-Clone `stable` once per user and symlink the OpenCode adapter and shared skills into `~/.config/opencode/`:
+Clone `stable` once per user and symlink the OpenCode adapter and each shared skill directory into `~/.config/opencode/` (symlinking individual skill directories preserves any existing skills in `~/.config/opencode/skills/`):
 
 ```sh
 git clone --branch stable https://github.com/jmartinlabs/agentic-harness-plugin.git ~/.local/share/agentic-harness-plugin
-mkdir -p ~/.config/opencode/agents ~/.config/opencode/plugins
+mkdir -p ~/.config/opencode/agents ~/.config/opencode/plugins ~/.config/opencode/skills
 for agent in ~/.local/share/agentic-harness-plugin/adapters/opencode/agents/*.md; do
   ln -sfn "$agent" ~/.config/opencode/agents/"$(basename "$agent")"
 done
 ln -sfn ~/.local/share/agentic-harness-plugin/adapters/opencode/plugins/review-read ~/.config/opencode/plugins/review-read
-ln -sfn ~/.local/share/agentic-harness-plugin/skills ~/.config/opencode/skills
+for skill in ~/.local/share/agentic-harness-plugin/skills/*; do
+  ln -sfn "$skill" ~/.config/opencode/skills/"$(basename "$skill")"
+done
 ```
 
 ### Hermes Agent
@@ -139,7 +141,7 @@ git -C ~/.local/share/agentic-harness-plugin checkout v1.2.0
 
 ## Usage reporting
 
-- **Manual report:** Run `agentic-usage-report` (Claude Code) or `python3 <plugin-root>/scripts/report-agent-usage` from the project root to inspect local agent usage summaries.
+- **Manual report:** Run `agentic-usage-report --session <UUID>` (Claude Code) or `python3 <plugin-root>/scripts/report-agent-usage --session <UUID>` from the project root to inspect local agent usage summaries.
 - **Automatic capture:** `auto-agent-usage` (`agentic-usage-auto` in Claude Code) is wired to Codex `Stop`, `SubagentStop` and `SessionEnd` hooks in `hooks/codex.json` and can be invoked directly from the project root.
 
 ---
