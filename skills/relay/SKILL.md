@@ -17,6 +17,7 @@ with an already-connected GitHub tool. This is the same relay format and semanti
 not another protocol. A repository Skill does not enable tools in ChatGPT automatically.
 
 ## Inputs
+- Read `specs/project-rules.md` (when present) before publishing or acknowledging relay messages.
 - An explicit user request to use the relay: `Lee`, `$relay read` or another named relay
   command. Never read relay messages proactively, on a timer or through a hook.
 - The active conversation ID, or the ID supplied by the user. If the context is lost, ask
