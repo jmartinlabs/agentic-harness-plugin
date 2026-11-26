@@ -20,6 +20,10 @@ codex plugin marketplace add https://github.com/jmartinlabs/agentic-harness-plug
 codex plugin add agentic@agentic-harness
 ```
 
+### Hermes Agent
+
+Hermes loads skills natively at user scope. Clone the `stable` channel once per user and symlink `skills/*` into `${HERMES_HOME:-$HOME/.hermes}/skills` (no files are copied into projects). To update, `git pull --ff-only` on `stable` and re-link; to roll back, check out the previous tag. Always start `hermes` from the project root. See [adapters/hermes/README.md](adapters/hermes/README.md) for the full commands and optional `model_map` role-routing snippet.
+
 Review and trust the plugin's SessionStart hook in Codex using `/hooks`. After an update or rollback, review it again if Codex marks the installed hook as changed. The SessionStart hook is configured to display `Agentic Harness X.Y.Z` from the installed artifact. Verify the message when you open a new session. If it is absent, check the client hook settings and report the loaded artifact version with the readiness diagnostic. Hook trust and project trust remain client decisions. [Codex plugin hooks](https://developers.openai.com/plugins/build/plugins), [Claude Code hooks](https://code.claude.com/docs/en/hooks)
 
 In a new project from **Use this template**, run the `agentic:verify-project` skill, then `agentic:init-project`. For an existing project, use `agentic:adopt-project`, which can run the read-only inventory before the entry files exist. The readiness skill reports `artifact_version`, the active project and its applicable policy paths. Stop if the active project's rules or the common policy are unavailable. If Claude Code denies plugin reads, find the artifact's `installPath` with `claude plugin list --json`. Run `python3 "<installPath>/scripts/verify-project.py" --print-rules` from your terminal. It prints the exact `Read(//<installPath>/**)` rule and separate tool rules without writing settings. Approve the permissions you need when prompted. To keep an approval for one project, add only its approved entries to `permissions.allow` in that project's untracked `.claude/settings.local.json`. Refresh the exact Read rule after an update if needed.
@@ -72,6 +76,7 @@ Every moved file, its template source blob (commit `5b53f75f1878909a65f76aa3e015
 | `roles/` | `README`, `functional`, `implementation`, `infrastructure`, `qa-review` (pinned) | |
 | `templates/` | 8 document templates | Skills copy them into a project when needed. |
 | `agents/` | Claude Code agents `functional`, `implementation`, `infrastructure`, `qa-review` | Read the role from `${CLAUDE_PLUGIN_ROOT}/roles/<role>.md`; no hooks, `permissionMode` or MCP servers. Claude Code only. |
+| `adapters/hermes/` | `README.md`, `model_map.example.yaml` | Minimal global per-user Hermes adapter and role-routing example; no duplicated skills or methodology. |
 | `hooks/hooks.json` | SessionStart reports the installed artifact version | Claude Code also keeps the existing orchestration context with an 8704-byte budget. Codex uses the native plugin hook trust flow. |
 | `scripts/`, `bin/` | Tools `work-issue`, `agent-relay`, `check-delegation-route`, `report-agent-usage`, `auto-agent-usage` (ported from the baseline; the project root is the working directory or `--repo-root`, never the plugin directory), the integrity validator `validate-core` and the read-only `verify-project.py` | In Claude Code, `bin/` is on the Bash tool PATH while the plugin is enabled: `agentic-work-issue`, `agentic-relay`, `agentic-check-delegation-route`, `agentic-usage-report`, `agentic-usage-auto`. Run them from the project directory; elsewhere use `python3 <plugin root>/scripts/<tool>`. |
 | `tests/` | Plugin static tests, the ported tool suites (`tests/test-<tool>`, run as `python3 tests/test-work-issue`) and `fixtures/work-issue-project.json` | `scripts/validate-core --project DIR` validates `DIR/.agents/harnesses/*.json` (harness JSON v2). |
@@ -99,7 +104,7 @@ All local, synthetic, one machine; client versions as observed in the increment-
 
 - OpenCode `review-read` and the OpenCode adapters (OpenCode is a second-stage client), and the template-only tooling (`validate-template`, `test-validator`, `check-mermaid`, the evals) are not packaged.
 - `scripts/validate-core` replaces the template's v2 schema checker; no Skill calls it yet. `methodology/dynamic-agents.md` names `scripts/validate-core` as the v2 checker (a deliberate delta, see PROVENANCE).
-- Native adapters other than the Claude Code agents (OpenCode agents and plugin, Hermes) are not packaged.
+- Native adapters other than the Claude Code agents and the minimal Hermes global adapter (`adapters/hermes/`) — such as OpenCode agents and plugin — are not packaged.
 - The `init-project`, `adopt-project` and `bootstrap` Skills and the first paragraph of `methodology/document-ownership.md` are rewritten for the plugin model (nothing common is copied into the project) but untested against a live client; the template repository itself is not yet reduced, and the interactive permission prompts are unrun.
 - The template's `docs/` guides (visual guide, client adapters, evals) are not part of the plugin; the sentences that mention them say so.
 - Codex and Antigravity runtime loading is claimed only as listed in the Clients table (0.1.0 content); the older pilot observations below add nothing beyond it.
