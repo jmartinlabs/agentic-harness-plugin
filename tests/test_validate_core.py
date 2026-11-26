@@ -132,9 +132,27 @@ class HarnessCase(unittest.TestCase):
         self.assertHarnessError()
 
     def test_automatic_is_only_claude_to_codex_review(self):
-        config = copy(VALID)
-        self.write(config, "hermes.json")
-        self.assertHarnessError()
+        for name in ("hermes.json", "antigravity.json"):
+            with self.subTest(name=name):
+                config = copy(VALID)
+                self.write(config, name)
+                self.assertHarnessError()
+                (self.root / ".agents" / "harnesses" / name).unlink()
+
+    def test_antigravity_v2_harness_is_accepted(self):
+        config = {
+            "version": 2,
+            "local": {
+                "model": None,
+                "effort": None,
+                "profiles": {
+                    "qa-review": {"standard": {"model": "flash"}, "complex": {"model": "pro"}},
+                },
+            },
+            "external": {},
+        }
+        self.write(config, "antigravity.json")
+        self.assertEqual(check_project(self.root), [])
 
     def test_cli_project_reports_the_files_and_exit_codes(self):
         ok = subprocess.run([sys.executable, str(SCRIPT), "--project", str(self.root)],
@@ -239,8 +257,8 @@ class PluginCase(unittest.TestCase):
             self.assertEqual(found, [f"agent-catalogue: {name}: agent catalogue drift, missing hermes"])
         root = self.fixture()
         path = root / "scripts" / "work-issue"
-        path.write_text(path.read_text().replace('DEFAULT_AGENTS = ("opencode", "hermes", "codex", "claude")',
-                                                 'DEFAULT_AGENTS = ("opencode", "hermes", "codex", "claude", "newone")'))
+        path.write_text(path.read_text().replace('DEFAULT_AGENTS = ("opencode", "hermes", "codex", "claude", "antigravity")',
+                                                 'DEFAULT_AGENTS = ("opencode", "hermes", "codex", "claude", "antigravity", "newone")'))
         found = [e for e in self.problems(root) if e.startswith("agent-catalogue:")]
         self.assertEqual(len(found), 3, found)
         path.write_text(path.read_text().replace("DEFAULT_AGENTS", "OTHER_AGENTS", 1))
