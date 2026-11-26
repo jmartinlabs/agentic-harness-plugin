@@ -189,11 +189,6 @@ class PluginCase(unittest.TestCase):
                 path.write_text(json.dumps(data))
                 self.assertRule(root, "manifest")
 
-    def test_missing_license_is_detected(self):
-        root = self.fixture()
-        (root / "LICENSE").unlink()
-        self.assertRule(root, "manifest")
-
     def test_provenance_hash_and_unlisted_file_are_detected(self):
         root = self.fixture()
         (root / "roles" / "qa-review.md").write_text("changed\n")

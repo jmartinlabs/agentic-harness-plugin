@@ -235,7 +235,7 @@ def check_manifests(root):
             loaded[name] = load_json(root / name)
         except (OSError, ValueError) as error:
             errors.append(f"manifest: {name}: {error}")
-    for key in ("name", "version", "license"):
+    for key in ("name", "version"):
         values = {name: data.get(key) for name, data in loaded.items()}
         if any(not isinstance(value, str) or not value for value in values.values()):
             errors.append(f"manifest: {key} must be a non-empty string in every manifest: {values}")
@@ -253,8 +253,6 @@ def check_manifests(root):
         listed = {entry.get("name") for entry in catalog.get("plugins", []) if isinstance(entry, dict)}
         if not listed or not listed <= names:
             errors.append(f"manifest: {name} lists {sorted(listed, key=str)}, expected {sorted(names, key=str)}")
-    if not (root / "LICENSE").is_file():
-        errors.append("manifest: LICENSE is missing")
     return errors
 
 

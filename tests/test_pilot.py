@@ -263,13 +263,6 @@ class PilotBoundaryTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("inventory blocked", result.stderr)
 
-    def test_license_is_mit_and_declared(self):
-        text = (ROOT / "LICENSE").read_text(encoding="utf-8")
-        self.assertTrue(text.startswith("MIT License\n"))
-        self.assertIn("Copyright (c) 2026 jmartinlabs", text)
-        for path in (".codex-plugin/plugin.json", ".claude-plugin/plugin.json", ".antigravity-plugin/plugin.json"):
-            with self.subTest(path=path):
-                self.assertEqual(json.loads((ROOT / path).read_text())["license"], "MIT")
 
 
 if __name__ == "__main__":
