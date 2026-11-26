@@ -5,13 +5,15 @@ import json
 import sys
 from pathlib import Path
 
-COORDINATORS = ("claude", "codex", "opencode", "hermes")
+COORDINATORS = ("claude", "codex", "opencode", "hermes", "antigravity")
 ARTIFACT = Path(__file__).resolve().parent.parent
 # Packaged native manifests agree on the artifact version (checked by validate-core).
 MANIFEST = ".claude-plugin/plugin.json"
 # Plugin-owned capabilities that a project should not shadow with local copies.
 PLUGIN_OWNED = (".agents/skills", ".agents/roles", ".claude/skills", ".claude/agents",
-                ".opencode/agents", ".codex/hooks.json", "specs/methodology")
+                ".opencode/agents", ".codex/hooks.json")
+METHODOLOGY = "methodology"
+PROJECT_METHODOLOGY = "specs/methodology"
 TEMPLATES = "templates"
 SHIM_RULES = ("agentic-verify-project", "agentic-work-issue", "agentic-relay",
               "agentic-check-delegation-route", "agentic-usage-report", "agentic-usage-auto")
@@ -62,6 +64,15 @@ def plugin_owned_paths(root):
     """Informational only: project paths that shadow plugin-owned capabilities."""
     found = [name for name in PLUGIN_OWNED
              if (root / name).exists() or (root / name).is_symlink()]
+    # A project may keep project-local docs under specs/methodology/; report only shipped names.
+    shipped_methodology = {item.name for item in (ARTIFACT / METHODOLOGY).glob("*.md")}
+    local_methodology = root / PROJECT_METHODOLOGY
+    if local_methodology.is_symlink() or (
+        local_methodology.is_dir()
+        and any((local_methodology / name).exists() or (local_methodology / name).is_symlink()
+                for name in shipped_methodology)
+    ):
+        found.append(PROJECT_METHODOLOGY)
     # A project may keep its own templates; report only the plugin's own file names.
     shipped = {item.name for item in (ARTIFACT / TEMPLATES).glob("*.md")}
     local = root / TEMPLATES
