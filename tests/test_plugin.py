@@ -11,7 +11,7 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-BASELINE = "e9a46160753c5e61f7d3291da9e6a0299f840aa0"
+BASELINE = "5b53f75f1878909a65f76aa3e0151f1a0f31d86d"
 HOOK_PRINT_BUDGET = 8704
 ASSET_DIRS = ("skills", "methodology", "roles", "agents", "templates")
 CLASSES = {"copy", "link-rewrite", "path-reword", "deliberate-delta"}

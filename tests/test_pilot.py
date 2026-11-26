@@ -116,7 +116,7 @@ class PilotTests(unittest.TestCase):
         self.assertIn("outside its root", result.stderr)
 
 
-# Baseline: jmartinlabs/agent-project-template e9a46160753c5e61f7d3291da9e6a0299f840aa0,
+# Baseline: jmartinlabs/agent-project-template 5b53f75f1878909a65f76aa3e0151f1a0f31d86d,
 # specs/methodology/approvals.md and .agents/roles/qa-review.md respectively.
 BASELINE_SHA256 = {
     "methodology/approvals.md": "e87dc895d259d1839724e35340623957051302503504e2e9387d4bbe0797fa8f",

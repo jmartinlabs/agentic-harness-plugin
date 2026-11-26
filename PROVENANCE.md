@@ -1,6 +1,6 @@
 # Provenance
 
-Every file below was moved from the Agentic Template at commit `e9a46160753c5e61f7d3291da9e6a0299f840aa0` (read as data). `Source blob` is `git rev-parse e9a4616:<source>`; `sha256` is of the destination bytes. Class precedence when several apply: deliberate-delta > path-reword > link-rewrite > copy. `copy` means byte-identical to the source.
+Every file below was moved from the Agentic Template at commit `5b53f75f1878909a65f76aa3e0151f1a0f31d86d` (read as data). `Source blob` is `git rev-parse 5b53f75:<source>`; `sha256` is of the destination bytes. Class precedence when several apply: deliberate-delta > path-reword > link-rewrite > copy. `copy` means byte-identical to the source.
 
 Deliberate deltas: `scripts/work-issue` (adds `project_root()` and `repo_root_option()`); `methodology/dynamic-agents.md` (the validator reference now points to `scripts/validate-core`); `skills/orchestrate/SKILL.md` step 4 (one sentence about who configures what, required by issue 77, keeping the v2 semantics of #75/#76); the sentence in work-issue and relay that the command-line tool now ships with the plugin (replaces the next-increment banner); the plugin-model rewrite of init-project, adopt-project and bootstrap and of the first paragraph of document-ownership (replaces the pre-plugin banner; see each row's note).
 

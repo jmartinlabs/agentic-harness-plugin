@@ -63,7 +63,7 @@ The historical client observations below are on 0.1.0 content, before the stable
 
 ## Package contents
 
-Every moved file, its template source blob (commit `e9a46160753c5e61f7d3291da9e6a0299f840aa0`), destination hash and transformation class are listed in [PROVENANCE.md](PROVENANCE.md).
+Every moved file, its template source blob (commit `5b53f75f1878909a65f76aa3e0151f1a0f31d86d`), destination hash and transformation class are listed in [PROVENANCE.md](PROVENANCE.md).
 
 | Area | Contents | Notes |
 | --- | --- | --- |
@@ -178,7 +178,7 @@ Both marketplace descriptors target the same package at the repository root. Cod
 
 ## Provenance and next verification
 
-`methodology/approvals.md` and `roles/qa-review.md` are verbatim from [Agentic Template e9a4616](https://github.com/jmartinlabs/agent-project-template/tree/e9a46160753c5e61f7d3291da9e6a0299f840aa0), from `specs/methodology/approvals.md` and `.agents/roles/qa-review.md` respectively. This staged extraction links a candidate to its upstream baseline. Subsequent distribution must maintain one canonical source.
+`methodology/approvals.md` and `roles/qa-review.md` are verbatim from [Agentic Template 5b53f75](https://github.com/jmartinlabs/agent-project-template/tree/5b53f75f1878909a65f76aa3e0151f1a0f31d86d), from `specs/methodology/approvals.md` and `.agents/roles/qa-review.md` respectively. This staged extraction links a candidate to its upstream baseline. Subsequent distribution must maintain one canonical source.
 
 | SPEC criterion | Candidate evidence and remaining check |
 | --- | --- |
@@ -188,7 +188,7 @@ Both marketplace descriptors target the same package at the repository root. Cod
 | AC-04 | Evidence: diagnostic covers missing rules, an unrelated repo, a nested checkout boundary and an out-of-root rules path; Claude negatives N2 (bad `sha`) and N3 (invalid manifests). Remaining: missing/disabled/incompatible plugin through the client (an enabled-but-uninstalled plugin fails open), unreadable rules, collision (N1, silent first-wins) and gate-bypass attempts need surface-level tests. |
 | AC-05 | Native user install, update and rollback passed in isolated profiles against a synthetic Git source. Verify startup messages and loaded skills for both projects at each version, keeping their rules and v2 configuration separate. Published tags remain a release smoke check. |
 | AC-06 | Evidence: skills, methodology, roles, templates and Claude agents are moved with per-file source blob, destination hash and transformation class in [PROVENANCE.md](PROVENANCE.md), checked by tests (the byte comparison with the template baseline runs only when `AGENTIC_TEMPLATE_CHECKOUT` points to a checkout containing it). The command-line tools and their tests are ported (increment 6; see `PROVENANCE.md`). Remaining: other native adapters (OpenCode review-read and adapters), template-only tooling, and client-level evidence that the moved assets load. No existing capability is retired by this package. |
-| AC-07 | Evidence: this slice contains no competing approval rules; `approvals.md` and `qa-review.md` are pinned byte-identical to e9a4616 by `sha256` tests; CI runs 45656722504 (2dc8015) and 45656917820 (506e52b) were green; see the PR checks for the final commit. Independent semantic audit of the moved files against e9a4616 found no drift (increment 5 audit; evidence kept by the coordinator, not in the repository). Remaining: review all common semantic consumers, including the #76 v2 selection rule, and record runtime context loads. |
+| AC-07 | Evidence: this slice contains no competing approval rules; `approvals.md` and `qa-review.md` are pinned byte-identical to 5b53f75 by `sha256` tests; CI runs 45656722504 (2dc8015) and 45656917820 (506e52b) were green; see the PR checks for the final commit. Independent semantic audit of the moved files against 5b53f75 found no drift (increment 5 audit; evidence kept by the coordinator, not in the repository). Remaining: review all common semantic consumers, including the #76 v2 selection rule, and record runtime context loads. |
 
 This README makes no operational claim; merge and release require the owner's explicit approval.
 
