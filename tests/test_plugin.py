@@ -191,5 +191,35 @@ class FrontmatterTests(unittest.TestCase):
                 self.assertTrue((ROOT / "roles" / f"{path.stem}.md").is_file())
 
 
+class CoordinatorDelegationTests(unittest.TestCase):
+    def test_coordinator_rules_require_full_technical_delegation_without_sequential_fallback(self):
+        forbidden = (
+            "do small corrections",
+            "same steps done sequentially",
+            "work sequentially",
+            "run the same queue sequentially",
+            "performs the same roles sequentially",
+            "Quick task the coordinator does itself",
+            "use direct execution for small",
+        )
+        targets = (
+            "skills/orchestrate/SKILL.md",
+            "methodology/workflows.md",
+            "methodology/dynamic-agents.md",
+            "methodology/epic-orchestration.md",
+            "roles/README.md",
+            "templates/agent-work-packet.md",
+        )
+        for rel in targets:
+            text = (ROOT / rel).read_text(encoding="utf-8")
+            for phrase in forbidden:
+                with self.subTest(file=rel, phrase=phrase):
+                    self.assertNotIn(phrase, text)
+        orchestrate = (ROOT / "skills/orchestrate/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("Delegate** all technical work", orchestrate)
+        self.assertIn("Quick/Standard/Full classify risk/workflow, not delegation exceptions", orchestrate)
+        self.assertIn("never execute technically", orchestrate)
+
+
 if __name__ == "__main__":
     unittest.main()
