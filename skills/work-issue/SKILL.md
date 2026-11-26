@@ -9,7 +9,7 @@ On-demand procedure for taking authorized Issues via native GitHub workflow (`gh
 
 ## Native statuses & reservation
 
-- **Authorization:** `Todo` authorizes execution. Open dependencies (`blocked_by`) or open blocking sub-issues block start. Never infer authorization from comments, labels, or `Backlog`.
+- **Authorization:** `Todo` authorizes execution. Check `gh api repos/{owner}/{repo}/issues/{n}/dependencies/blocked_by` and require zero open blockers (including open blocking sub-issues) before reserving. Never infer authorization from comments, labels, or `Backlog`.
 - **Fallback (404 / unavailable):** If native `planning-statuses` return 404 or are unavailable, **stop immediately** and require explicit human authorization before any write or work; never invent local states.
 - **Routing:** Optional `agent:<client>` label (`claude`, `codex`, `opencode`, `hermes`, `antigravity`); no label means any compatible client. **Never use GitHub assignees** (assigning moves `Backlog` → `Todo` and does not revert on unassign).
 - **Reserve (soft lock, last-write-wins):** Re-read the Issue, verify `Todo` and no open `blocked_by`, then:

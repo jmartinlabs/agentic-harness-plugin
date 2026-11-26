@@ -74,9 +74,9 @@ Follow the roadmap Skill. Get approval and commit the initial roadmap.
 When the user asked to initialize the project and a tracker is available, also leave the
 planning Issues each SPEC needs in `Backlog`, linked to their epic and shaped by the
 [Issue template](../../templates/issue.md); once a SPEC is approved, generate its executable
-Issues the same way without waiting for a new request. Deduplicate first, never mark them
-`Ready` because they were generated, and never invent access: without a repository or
-permission, deliver the proposal and the blocker. Operational state stays in the tracker per the
+Issues the same way without waiting for a new request. Deduplicate first, keep them in `Backlog`
+(never `Todo`) because they were generated, and never invent access: without a repository or
+permission, deliver the proposal and the blocker. Operational state stays in Issues and native `planning-statuses` per the
 [issue workflow](../../methodology/issue-workflow.md).
 ### Stage 7 — Handoff
 Summarize decisions (by link), technologies, architecture, verified bootstrap, documentation,

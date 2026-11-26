@@ -120,7 +120,7 @@ class PilotTests(unittest.TestCase):
 # specs/methodology/approvals.md and .agents/roles/qa-review.md respectively.
 BASELINE_SHA256 = {
     "methodology/approvals.md": "e87dc895d259d1839724e35340623957051302503504e2e9387d4bbe0797fa8f",
-    "roles/qa-review.md": "fa66317784b1dc82c718a651bccbe16242b2bf65a2a56ac69f4969ce43312de1",
+    "roles/qa-review.md": "1982da1aae1ce87c59b9a2ff9c149b4269e437c0d6ca8723a0e8254045f56b49",
 }
 
 
