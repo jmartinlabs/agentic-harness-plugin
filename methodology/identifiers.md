@@ -58,10 +58,8 @@ It never replaces per-stage evidence and never turns a partial or unrun check in
 
 ## 4. Traceability without a second tracker
 
-The existing `specs/epic-board.md` remains the single operational state owner when several
-live workstreams need scheduling, unless an external tracker owns status: then the Project
-`Status` is the only operational source per the [issue workflow](issue-workflow.md). A bounded
-feature uses its progress and testplan documents.
+GitHub Issues and native `planning-statuses` are the single operational source per the
+[issue workflow](issue-workflow.md). A bounded feature uses its progress and testplan documents.
 
 Each row records:
 
@@ -116,7 +114,7 @@ feat(theme): DEV-01 — sistema de temas y shell
 
 - Existing documentation numbers, `SPECnn`/`DEVnn`, PR numbers and A/B/C labels are historical
   references; keep them and map them in one index.
-- Validators check structure only: identifier presence, stage/state vocabulary, board columns,
+- Validators check structure only: identifier presence, stage/state vocabulary,
   packet fields and alias uniqueness. They never infer approval or state truth.
 - A new project documents its grammar and adopts the four stages before the first DEV block.
 - A project that does not adopt this convention keeps working; adoption is additive.

@@ -225,7 +225,7 @@ class PilotBoundaryTests(unittest.TestCase):
             self.assertEqual(list(rules), ["permissions"])
             root = (self.bundle).resolve()
             self.assertEqual(rules["permissions"]["allow"], [
-                f"Read(/{root}/**)", "Bash(agentic-verify-project:*)", "Bash(agentic-work-issue:*)",
+                f"Read(/{root}/**)", "Bash(agentic-verify-project:*)",
                 "Bash(agentic-relay:*)", "Bash(agentic-check-delegation-route:*)",
                 "Bash(agentic-usage-report:*)", "Bash(agentic-usage-auto:*)"])
         self.assertEqual(before, sorted(self.sandbox.rglob("*")))

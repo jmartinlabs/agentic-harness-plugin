@@ -20,9 +20,7 @@ development before the scope is authorized; a phase request is not an authorizat
 
 ## Routing
 
-Optional: one label `agent:opencode`, `agent:hermes`, `agent:codex`, `agent:claude` or `agent:antigravity` (the bare
-name is an alias) to route the Issue to that agent; no label means any compatible agent. A
-label is routing, never authorization. The GitHub assignee is ignored by agents.
+Optional: one label `agent:opencode`, `agent:hermes`, `agent:codex`, `agent:claude` or `agent:antigravity` to route the Issue to that agent; no label means any compatible agent. A label is routing, never authorization. Never use GitHub assignees (assigning moves `Backlog` → `Todo` and does not revert).
 
 ## Linked SPEC
 
@@ -36,17 +34,9 @@ produce several executable Issues; link the parent epic or roadmap row when it e
 
 ## Dependencies
 
-`Depends on #N` for each hard dependency, or `None`. A dependency is satisfied only when it is
-`Done`; an Issue still in review does not unblock this one. The number is resolved in this
-repository only: a same-numbered Issue in another repository never satisfies it, and a
-qualified `owner/repo#N` reference is unsupported and fails closed.
+Native `blocked_by` dependencies (or blocking sub-issues), or `None`. A dependency is satisfied only when it is `Done`; an Issue still in `In review` does not unblock this one.
 
 ## Authorization and evidence
 
-- Authorization: who authorized which phase and when, with a link to the comment or decision.
-  `Pending` until a human records it; an agent comment is never an authorization.
-- Tracker: Project and status when one exists, otherwise `manual protocol`. Everything starts
-  in `Backlog`: generating documentation or tickets never marks work `Ready`.
-- Evidence on delivery: branch and commit, PR, checks (PASS / FAIL / UNRUN) and the exact review
-  request. Closure is a human `Done` decision: a native closing link can close the Issue on
-  merge, so verify after any merge and reopen it if acceptance was not recorded.
+- Status: native `planning-statuses` (`Backlog`, `Todo`, `In progress`, `In review`, `Done`, `Not planned`, `Duplicate`). Everything starts in `Backlog`; `Todo` authorizes execution.
+- Evidence on delivery: branch and commit, PR, checks (PASS / FAIL / UNRUN) and candidate SHA. Against the default branch, `Closes #N` transitions to `Done` on merge; against `test`, use `Refs #N` and close after promotion or acceptance.

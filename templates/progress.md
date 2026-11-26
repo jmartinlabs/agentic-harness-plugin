@@ -2,15 +2,15 @@
 
 Specification: SPECIFICATION_PATH
 
-Keep one current summary per task, replaced in place. When a Project/tracker or
-`specs/epic-board.md` exists it is the single current-state surface and this table is history
+Keep one current summary per task, replaced in place. When GitHub Issues track the work
+they are the single current-state surface and this table is history
 only: never keep two competing statuses.
 Everything below the table is append-only; a correction is a new dated entry, not an edit.
 
-## Current state — only when no board or tracker exists
+## Current state — only when no Issue tracks the work
 
-If a Project/tracker or `specs/epic-board.md` exists, do not maintain this table: that surface
-holds the current state and this file keeps only the history below.
+If GitHub Issues track the work, do not maintain this table: Issues
+hold the current state and this file keeps only the history below.
 
 | Task | State | Owner (start/stop, permission-sensitive operations) | Branch / candidate SHA | Checks last verified | PR / CI / merge | Next action | Evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- |

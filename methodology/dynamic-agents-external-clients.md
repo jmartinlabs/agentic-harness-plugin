@@ -50,7 +50,7 @@ edits it.
 Task types: `review` and `investigate` are read-only. `develop` stays `disabled` until writing is
 validated in an isolated worktree; afterwards it also needs DEV authorization, file ownership and an
 isolated checkout, and keeps QA and human merge. Concurrent writers need separate checkouts and disjoint
-files. Delegates never use `work-issue`, claim Issues, write Project `Status`, delegate further or merge.
+files. Delegates never reserve Issues, write native Issue status, delegate further or merge.
 
 ## Codex CLI
 
