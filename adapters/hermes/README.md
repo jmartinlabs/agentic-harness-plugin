@@ -78,7 +78,7 @@ Remove the symlinks pointing into `$PLUGIN_ROOT/skills/` from `${HERMES_HOME:-$H
 - **Always launch from the project root**: Hermes injects `AGENTS.md` from the current working directory. Starting in a subdirectory drops project rules.
 - **Restart after policy edits**: changes to `AGENTS.md` or profile configuration take effect only in a new session.
 - **No `--yolo` or `approvals.mode: off`**: shell command approvals are not semantic approvals; follow [methodology/approvals.md](../../methodology/approvals.md).
-- **Per-profile scope**: `HERMES_HOME` isolates profiles. Repeat the symlink step for each profile that should load the plugin.
+- **Per-profile scope**: `HERMES_HOME` isolates profiles. Repeat the symlink step for each profile that should load the plugin. `scripts/update-agentic --check` (and `scripts/update-agentic`) inspects `${HERMES_HOME:-$HOME/.hermes}/profiles/*/` in read-only mode (when the shared plugin checkout exists) and reports profiles whose `skills/` directory is missing (explicitly noted as `missing skills/`) or contains no symlink to a top-level skill directory inside `<shared-repo>/skills` (if the profile's `skills/` directory itself is a symlink to `<shared-repo>/skills`, the profile is considered covered; profiles with only local/homonymous skills such as a standalone `work-issue`, copied skills instead of symlinks, links to files/nested subdirectories, or links to another checkout are reported). A single valid symlink to a top-level skill directory inside `<shared-repo>/skills` is enough to consider a profile covered, so partial symlink sets are not detected. This check is advisory only: `update-agentic` never creates, repairs, or modifies profile directories or `config.yaml`.
 
 ## Role-based delegation (`model_map`)
 
