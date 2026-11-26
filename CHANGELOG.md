@@ -2,6 +2,23 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/), see [RELEASING.md](RELEASING.md).
 
+## [1.2.0] - 2026-11-26
+
+Release candidate. Merge, tag and release need the owner's explicit approval.
+
+### Added
+- Antigravity coordinator support: `work-issue`, v2 `antigravity.json`, `verify-project.py` support and global installation docs (#7).
+- OpenCode global per-user adapter (`adapters/opencode/`) with `review-read` scoped by `cwd` (#4).
+- Hermes global per-user adapter (`adapters/hermes/`) (#5).
+- Codex `auto-agent-usage` lifecycle hooks (`Stop`, `SubagentStop`, `SessionEnd`) in `hooks/codex.json` (#6).
+- `validate-core` guards for secrets, neutrality, `git diff` and required phrases (#8).
+
+### Fixed
+- Operational skills now reference `specs/project-rules.md`; native model/effort fallback behavior clarified; `Standard`/`$task` aligned in `roles/implementation.md`; granular methodology check added in `verify-project.py` (#8).
+
+### Known limitations
+- Quota-gated live checks for Claude Code and Codex are deferred.
+
 ## [1.1.0] - unreleased
 
 Merge, tag and release need the owner's explicit approval.
