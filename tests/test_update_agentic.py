@@ -524,6 +524,43 @@ class UpdateAgenticTests(unittest.TestCase):
             self.assertEqual(by_name["hermes"].status, "not-installed")
             self.assertEqual(by_name["hermes"].detail, "no agentic symlinks found")
 
+    def test_hermes_cyclic_symlink_in_profile_is_reported_without_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            shared_repo = home / ".local" / "share" / "agentic-harness-plugin"
+            hermes_home = home / ".hermes"
+            _setup_shared_harnesses(home, shared_repo, version="1.2.2")
+
+            cyclic_skills = hermes_home / "profiles" / "cyclic-prof" / "skills"
+            cyclic_skills.mkdir(parents=True, exist_ok=True)
+            (cyclic_skills / "loop").symlink_to("loop")
+
+            before_tree = sorted(str(p.relative_to(hermes_home)) for p in hermes_home.rglob("*"))
+
+            with mock.patch.dict(
+                "os.environ",
+                {"HOME": str(home), "AGENTIC_SHARED_REPO": str(shared_repo), "HERMES_HOME": str(hermes_home)},
+                clear=True,
+            ), mock.patch.object(MOD["shutil"], "which", return_value=None):
+                results = run_all(
+                    check_only=True,
+                    home=home,
+                    env={"AGENTIC_SHARED_REPO": str(shared_repo), "HERMES_HOME": str(hermes_home)},
+                    runner=lambda *_: (_ for _ in ()).throw(AssertionError("unexpected call")),
+                    which=lambda _name: None,
+                )
+                by_name = {r.harness: r for r in results}
+                self.assertEqual(by_name["hermes"].status, "installed")
+                self.assertIn("profiles without shared-checkout plugin skills:", by_name["hermes"].detail)
+                self.assertIn("cyclic-prof", by_name["hermes"].detail)
+
+                with mock.patch("builtins.print"):
+                    exit_code = main(["--check"])
+                self.assertEqual(exit_code, 0)
+
+            after_tree = sorted(str(p.relative_to(hermes_home)) for p in hermes_home.rglob("*"))
+            self.assertEqual(before_tree, after_tree)
+
     def test_hermes_without_profiles_preserves_existing_result_and_exit_code(self):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp) / "home"

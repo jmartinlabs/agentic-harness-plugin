@@ -424,7 +424,7 @@ def _profile_has_shared_skill_symlink(skills_dir: Path, shared_skills: Path) -> 
             continue
         try:
             resolved = entry.resolve()
-        except OSError:
+        except (OSError, RuntimeError):
             continue
         if resolved.exists() and resolved != shared_skills_resolved and _is_within(resolved, shared_skills_resolved):
             return True
