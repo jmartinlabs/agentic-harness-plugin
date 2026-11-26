@@ -20,6 +20,22 @@ codex plugin marketplace add https://github.com/jmartinlabs/agentic-harness-plug
 codex plugin add agentic@agentic-harness
 ```
 
+### OpenCode (global per-user adapter)
+
+OpenCode loads user-level agents, plugins and skills from `~/.config/opencode/`. Clone the plugin once at a user path tracking `stable` and symlink the OpenCode adapter and shared skills into `~/.config/opencode/`:
+
+```sh
+git clone --branch stable https://github.com/jmartinlabs/agentic-harness-plugin.git ~/.local/share/agentic-harness-plugin
+mkdir -p ~/.config/opencode/agents ~/.config/opencode/plugins
+for agent in ~/.local/share/agentic-harness-plugin/adapters/opencode/agents/*.md; do
+  ln -sfn "$agent" ~/.config/opencode/agents/"$(basename "$agent")"
+done
+ln -sfn ~/.local/share/agentic-harness-plugin/adapters/opencode/plugins/review-read ~/.config/opencode/plugins/review-read
+ln -sfn ~/.local/share/agentic-harness-plugin/skills ~/.config/opencode/skills
+```
+
+Each project keeps its own `AGENTS.md`, `specs/project-rules.md` and `.agents/harnesses/opencode.json`. The `review-read` plugin resolves its wrapper from the plugin checkout and runs against the active project working directory.
+
 Review and trust the plugin's SessionStart hook in Codex using `/hooks`. After an update or rollback, review it again if Codex marks the installed hook as changed. The SessionStart hook is configured to display `Agentic Harness X.Y.Z` from the installed artifact. Verify the message when you open a new session. If it is absent, check the client hook settings and report the loaded artifact version with the readiness diagnostic. Hook trust and project trust remain client decisions. [Codex plugin hooks](https://developers.openai.com/plugins/build/plugins), [Claude Code hooks](https://code.claude.com/docs/en/hooks)
 
 In a new project from **Use this template**, run the `agentic:verify-project` skill, then `agentic:init-project`. For an existing project, use `agentic:adopt-project`, which can run the read-only inventory before the entry files exist. The readiness skill reports `artifact_version`, the active project and its applicable policy paths. Stop if the active project's rules or the common policy are unavailable. If Claude Code denies plugin reads, find the artifact's `installPath` with `claude plugin list --json`. Run `python3 "<installPath>/scripts/verify-project.py" --print-rules` from your terminal. It prints the exact `Read(//<installPath>/**)` rule and separate tool rules without writing settings. Approve the permissions you need when prompted. To keep an approval for one project, add only its approved entries to `permissions.allow` in that project's untracked `.claude/settings.local.json`. Refresh the exact Read rule after an update if needed.
@@ -37,6 +53,11 @@ claude plugin update agentic@agentic-harness --scope user
 codex plugin marketplace upgrade agentic-harness
 ```
 
+```sh
+# OpenCode (global per-user adapter)
+git -C ~/.local/share/agentic-harness-plugin pull --ff-only origin stable
+```
+
 ### Roll back
 
 Outside any project, uninstall the user plugin and remove the marketplace, then re-add the same marketplace and reinstall. In the install commands above replace `stable` with the previous published tag, such as `v1.0.0`. Use the same procedure with `stable` to return to the stable channel. The older artifact may predate the startup banner.
@@ -49,6 +70,12 @@ claude plugin marketplace remove agentic-harness
 ```sh
 codex plugin remove agentic@agentic-harness
 codex plugin marketplace remove agentic-harness
+```
+
+```sh
+# OpenCode (global per-user adapter): check out the previous tag, or `stable` to return
+git -C ~/.local/share/agentic-harness-plugin fetch --tags
+git -C ~/.local/share/agentic-harness-plugin checkout v1.0.0
 ```
 
 The native CLI flows were exercised in fresh temporary profiles on Claude Code 2.1.330 and Codex CLI 0.172.0 against a synthetic Git source. Both installed 1.1.0, upgraded to 1.1.1 and returned to 1.1.0 through the same marketplace identity. That probe used a synthetic branch for the old ref, with no model calls. Claude's native SessionStart trace also reported the expected version in both synthetic projects at each step, before authentication. Codex discovered the native hook and required trust before executing it. Authenticated session and published-tag checks remain separate.
@@ -72,6 +99,7 @@ Every moved file, its template source blob (commit `5b53f75f1878909a65f76aa3e015
 | `roles/` | `README`, `functional`, `implementation`, `infrastructure`, `qa-review` (pinned) | |
 | `templates/` | 8 document templates | Skills copy them into a project when needed. |
 | `agents/` | Claude Code agents `functional`, `implementation`, `infrastructure`, `qa-review` | Read the role from `${CLAUDE_PLUGIN_ROOT}/roles/<role>.md`; no hooks, `permissionMode` or MCP servers. Claude Code only. |
+| `adapters/opencode/` | Thin native OpenCode agents (`functional`, `implementation`, `infrastructure`, `qa`, `review`), `plugins/review-read/index.ts`, and `scripts/review-read` | Global per-user adapter for `~/.config/opencode/`; agents point to canonical `roles/*.md` without duplicating methodology or skills. |
 | `hooks/hooks.json` | SessionStart reports the installed artifact version | Claude Code also keeps the existing orchestration context with an 8704-byte budget. Codex uses the native plugin hook trust flow. |
 | `scripts/`, `bin/` | Tools `work-issue`, `agent-relay`, `check-delegation-route`, `report-agent-usage`, `auto-agent-usage` (ported from the baseline; the project root is the working directory or `--repo-root`, never the plugin directory), the integrity validator `validate-core` and the read-only `verify-project.py` | In Claude Code, `bin/` is on the Bash tool PATH while the plugin is enabled: `agentic-work-issue`, `agentic-relay`, `agentic-check-delegation-route`, `agentic-usage-report`, `agentic-usage-auto`. Run them from the project directory; elsewhere use `python3 <plugin root>/scripts/<tool>`. |
 | `tests/` | Plugin static tests, the ported tool suites (`tests/test-<tool>`, run as `python3 tests/test-work-issue`) and `fixtures/work-issue-project.json` | `scripts/validate-core --project DIR` validates `DIR/.agents/harnesses/*.json` (harness JSON v2). |
@@ -97,9 +125,9 @@ All local, synthetic, one machine; client versions as observed in the increment-
 
 ### Not yet in the plugin
 
-- OpenCode `review-read` and the OpenCode adapters (OpenCode is a second-stage client), and the template-only tooling (`validate-template`, `test-validator`, `check-mermaid`, the evals) are not packaged.
+- Template-only tooling (`validate-template`, `test-validator`, `check-mermaid`, the evals) and the Hermes adapter are not packaged.
 - `scripts/validate-core` replaces the template's v2 schema checker; no Skill calls it yet. `methodology/dynamic-agents.md` names `scripts/validate-core` as the v2 checker (a deliberate delta, see PROVENANCE).
-- Native adapters other than the Claude Code agents (OpenCode agents and plugin, Hermes) are not packaged.
+- The OpenCode global adapter (`adapters/opencode/`) is packaged statically; live OpenCode runtime verification remains separate.
 - The `init-project`, `adopt-project` and `bootstrap` Skills and the first paragraph of `methodology/document-ownership.md` are rewritten for the plugin model (nothing common is copied into the project) but untested against a live client; the template repository itself is not yet reduced, and the interactive permission prompts are unrun.
 - The template's `docs/` guides (visual guide, client adapters, evals) are not part of the plugin; the sentences that mention them say so.
 - Codex and Antigravity runtime loading is claimed only as listed in the Clients table (0.1.0 content); the older pilot observations below add nothing beyond it.
