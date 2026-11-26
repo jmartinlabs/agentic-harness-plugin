@@ -421,8 +421,7 @@ def _profile_has_shared_skill_symlink(skills_dir: Path, shared_skills: Path) -> 
     shared_skills_resolved = shared_skills.resolve()
     if skills_dir.is_symlink():
         try:
-            if skills_dir.resolve() == shared_skills_resolved:
-                return True
+            return skills_dir.resolve() == shared_skills_resolved
         except (OSError, RuntimeError):
             return False
     for entry in sorted(skills_dir.iterdir()):

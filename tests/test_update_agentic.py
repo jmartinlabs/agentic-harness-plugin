@@ -497,6 +497,14 @@ class UpdateAgenticTests(unittest.TestCase):
             other_dir_link_prof.mkdir(parents=True, exist_ok=True)
             (other_dir_link_prof / "skills").symlink_to(other_checkout_skill.parent)
 
+            # <perfil>/skills symlinked to another checkout's skills/ that itself symlinks to <shared>/skills/<skill> -> reported
+            other_nested_skills = Path(tmp) / "other-nested" / "skills"
+            other_nested_skills.mkdir(parents=True, exist_ok=True)
+            (other_nested_skills / "verify-project").symlink_to(shared_repo / "skills" / "verify-project")
+            other_dir_nested_prof = hermes_home / "profiles" / "other-dir-nested-link"
+            other_dir_nested_prof.mkdir(parents=True, exist_ok=True)
+            (other_dir_nested_prof / "skills").symlink_to(other_nested_skills)
+
             before_tree = sorted(str(p.relative_to(hermes_home)) for p in hermes_home.rglob("*"))
 
             def forbid_runner(cmd, cwd, timeout):
@@ -523,6 +531,7 @@ class UpdateAgenticTests(unittest.TestCase):
             self.assertIn("skill-md-link", hermes_res.detail)
             self.assertIn("nested-subdir-link", hermes_res.detail)
             self.assertIn("other-dir-link", hermes_res.detail)
+            self.assertIn("other-dir-nested-link", hermes_res.detail)
             self.assertIn(".hidden-prof (missing skills/)", hermes_res.detail)
             self.assertIn("no-skills-prof (missing skills/)", hermes_res.detail)
             self.assertNotIn("good-profile", hermes_res.detail)
