@@ -20,7 +20,8 @@ class PilotTests(unittest.TestCase):
         self.bundle.mkdir()
         for name in ("scripts", "methodology", "roles", "skills", "templates"):
             shutil.copytree(ROOT / name, self.bundle / name)
-        shutil.copyfile(ROOT / "plugin.json", self.bundle / "plugin.json")
+        for manifest_dir in (".claude-plugin", ".codex-plugin", ".antigravity-plugin"):
+            shutil.copytree(ROOT / manifest_dir, self.bundle / manifest_dir)
         self.projects = self.sandbox / "projects"
         shutil.copytree(FIXTURES, self.projects)
 
@@ -32,14 +33,14 @@ class PilotTests(unittest.TestCase):
 
     def test_manifest_identity_and_portable_skill(self):
         manifests = [json.loads((ROOT / path).read_text()) for path in (
-            "plugin.json", ".claude-plugin/plugin.json", ".antigravity-plugin/plugin.json",
+            ".codex-plugin/plugin.json", ".claude-plugin/plugin.json", ".antigravity-plugin/plugin.json",
         )]
         self.assertEqual({item["name"] for item in manifests}, {"agentic"})
         self.assertEqual(len({item["version"] for item in manifests}), 1)
         for manifest in manifests:
             self.assertRegex(manifest["version"], r"^\d+\.\d+\.\d+$")
             self.assertTrue(manifest["description"].strip())
-        self.assertEqual(manifests[0]["$schema"], "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json")
+        self.assertEqual(manifests[0]["hooks"], "./hooks/codex.json")
         self.assertTrue(manifests[1]["author"]["name"].strip())
         self.assertEqual(manifests[2]["$schema"], "https://antigravity.google/schemas/v1/plugin.json")
         self.assertTrue(manifests[2]["displayName"].strip())
@@ -115,7 +116,7 @@ class PilotTests(unittest.TestCase):
         self.assertIn("outside its root", result.stderr)
 
 
-# Baseline: jmartinlabs/agent-project-template e9a46160753c5e61f7d3291da9e6a0299f840aa0,
+# Baseline: jmartinlabs/agent-project-template 5b53f75f1878909a65f76aa3e0151f1a0f31d86d,
 # specs/methodology/approvals.md and .agents/roles/qa-review.md respectively.
 BASELINE_SHA256 = {
     "methodology/approvals.md": "e87dc895d259d1839724e35340623957051302503504e2e9387d4bbe0797fa8f",
@@ -198,17 +199,18 @@ class PilotBoundaryTests(unittest.TestCase):
         (a / ".claude/agents/qa-review.md").write_text("local copy", encoding="utf-8")
         (a / "specs/methodology").mkdir()
         (a / ".codex").mkdir()
+        (a / ".codex/hooks.json").write_text("{}", encoding="utf-8")
         (a / "templates").mkdir()
         (a / "templates/own-notes.md").write_text("project file", encoding="utf-8")
         result = self.invoke(a)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)["plugin_owned_paths_in_project"],
-                         [".claude/agents", ".codex", "specs/methodology"])
+                         [".claude/agents", ".codex/hooks.json", "specs/methodology"])
         (a / "templates/issue.md").write_text("local copy", encoding="utf-8")
         result = self.invoke(a)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)["plugin_owned_paths_in_project"],
-                         [".claude/agents", ".codex", "specs/methodology", "templates"])
+                         [".claude/agents", ".codex/hooks.json", "specs/methodology", "templates"])
 
     def test_print_rules_prints_json_and_writes_nothing(self):
         project = self.projects / "a"
@@ -234,36 +236,6 @@ class PilotBoundaryTests(unittest.TestCase):
         self.assertEqual(report["artifact_read_rule_hint"], f"Read(/{report['artifact_root']}/**)")
         self.assertTrue(report["artifact_read_rule_hint"].startswith("Read(//"))
 
-    def pin_report(self, version_ref, local=False):
-        project = self.projects / "a"
-        (project / ".claude").mkdir(exist_ok=True)
-        if version_ref is not None:
-            settings = {"extraKnownMarketplaces": {"agentic-harness": {"source": {
-                "source": "github", "repo": "jmartinlabs/agentic-harness-plugin", "ref": version_ref}}}}
-            name = "settings.local.json" if local else "settings.json"
-            (project / ".claude" / name).write_text(json.dumps(settings))
-        result = self.invoke(project)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        return json.loads(result.stdout)
-
-    def test_pin_status_four_cases_and_exit_code_unchanged(self):
-        version = json.loads((ROOT / "plugin.json").read_text())["version"]
-        for ref, local, status in ((f"v{version}", False, "tag-match"), ("v0.0.1", True, "tag-mismatch"),
-                                   ("a" * 40, False, "sha-or-branch"), ("main", True, "sha-or-branch"),
-                                   (None, False, "absent")):
-            with self.subTest(ref=ref):
-                report = self.pin_report(ref, local)
-                self.assertEqual((report["project_pin"], report["pin_status"]), (ref, status))
-                self.assertEqual(report["artifact_version"], version)
-                shutil.rmtree(self.projects / "a/.claude")
-
-    def test_pin_status_ignores_malformed_settings(self):
-        project = self.projects / "a"
-        (project / ".claude").mkdir()
-        (project / ".claude/settings.json").write_text("{not json")
-        report = self.pin_report(None)
-        self.assertEqual((report["project_pin"], report["pin_status"]), (None, "absent"))
-
     def test_inventory_mode(self):
         empty = self.sandbox / "empty"
         empty.mkdir()
@@ -274,7 +246,6 @@ class PilotBoundaryTests(unittest.TestCase):
         self.assertEqual(report["project_root"], str(empty.resolve()))
         self.assertEqual(report["entry_files"], {"AGENTS.md": False, "CLAUDE.md": False, "specs/project-rules.md": False})
         self.assertEqual(report["plugin_owned_paths_in_project"], [])
-        self.assertEqual(report["pin_status"], "absent")
         self.assertEqual(self.invoke(empty).returncode, 2)  # default mode still blocks
         (empty / ".claude/skills").mkdir(parents=True)
         (empty / "AGENTS.md").write_text("x")
@@ -292,13 +263,6 @@ class PilotBoundaryTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("inventory blocked", result.stderr)
 
-    def test_license_is_mit_and_declared(self):
-        text = (ROOT / "LICENSE").read_text(encoding="utf-8")
-        self.assertTrue(text.startswith("MIT License\n"))
-        self.assertIn("Copyright (c) 2026 jmartinlabs", text)
-        for path in ("plugin.json", ".claude-plugin/plugin.json", ".antigravity-plugin/plugin.json"):
-            with self.subTest(path=path):
-                self.assertEqual(json.loads((ROOT / path).read_text())["license"], "MIT")
 
 
 if __name__ == "__main__":

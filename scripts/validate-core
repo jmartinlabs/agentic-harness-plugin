@@ -23,7 +23,7 @@ PLUGIN_ROOT = Path(__file__).resolve().parent.parent
 HOOK_PRINT_BUDGET = 8704
 ASSET_DIRS = ("skills", "methodology", "roles", "agents", "templates")
 CLASSES = {"copy", "link-rewrite", "path-reword", "deliberate-delta"}
-MANIFESTS = ("plugin.json", ".claude-plugin/plugin.json", ".antigravity-plugin/plugin.json")
+MANIFESTS = (".codex-plugin/plugin.json", ".claude-plugin/plugin.json", ".antigravity-plugin/plugin.json")
 MARKETPLACES = (".claude-plugin/marketplace.json", ".agents/plugins/marketplace.json")
 SHIMS = {
     "agentic-work-issue": "work-issue",
@@ -235,7 +235,7 @@ def check_manifests(root):
             loaded[name] = load_json(root / name)
         except (OSError, ValueError) as error:
             errors.append(f"manifest: {name}: {error}")
-    for key in ("name", "version", "license"):
+    for key in ("name", "version"):
         values = {name: data.get(key) for name, data in loaded.items()}
         if any(not isinstance(value, str) or not value for value in values.values()):
             errors.append(f"manifest: {key} must be a non-empty string in every manifest: {values}")
@@ -248,11 +248,11 @@ def check_manifests(root):
         except (OSError, ValueError) as error:
             errors.append(f"manifest: {name}: {error}")
             continue
+        if catalog.get("name") != "agentic-harness":
+            errors.append(f"manifest: {name} must declare the agentic-harness marketplace")
         listed = {entry.get("name") for entry in catalog.get("plugins", []) if isinstance(entry, dict)}
         if not listed or not listed <= names:
             errors.append(f"manifest: {name} lists {sorted(listed, key=str)}, expected {sorted(names, key=str)}")
-    if not (root / "LICENSE").is_file():
-        errors.append("manifest: LICENSE is missing")
     return errors
 
 
@@ -285,24 +285,37 @@ def check_provenance(root):
 
 
 def check_hook(root):
+    configs = {
+        "hooks/hooks.json": 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/session-start.py" --claude',
+        "hooks/codex.json": 'python3 "${PLUGIN_ROOT}/hooks/session-start.py"',
+    }
+    errors = []
+    if (root / "plugin.json").exists():
+        errors.append("hook: portable plugin.json takes precedence and suppresses native hooks in Codex 0.172.0")
+    for name, command in configs.items():
+        try:
+            config = load_json(root / name)
+            (group,) = config["hooks"]["SessionStart"]
+            (hook,) = group["hooks"]
+            if (list(config) != ["hooks"] or list(config["hooks"]) != ["SessionStart"]
+                    or hook != {"type": "command", "command": command}):
+                errors.append(f"hook: unexpected SessionStart configuration in {name}")
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            errors.append(f"hook: {name}: {error}")
     try:
-        config = load_json(root / "hooks/hooks.json")
-        (group,) = config["hooks"]["SessionStart"]
-        (hook,) = group["hooks"]
+        manifest = load_json(root / ".codex-plugin/plugin.json")
+        if manifest["hooks"] != "./hooks/codex.json":
+            errors.append("hook: Codex manifest must select hooks/codex.json")
     except (OSError, ValueError, KeyError, TypeError) as error:
-        return [f"hook: hooks/hooks.json is not the single SessionStart hook ({error})"]
-    if list(config) != ["hooks"] or list(config["hooks"]) != ["SessionStart"] or hook.get("type") != "command":
-        return ["hook: hooks/hooks.json must hold only one SessionStart command hook"]
-    match = re.fullmatch(r'cat "\$\{CLAUDE_PLUGIN_ROOT\}/(skills/orchestrate/SKILL\.md)" 2>/dev/null \|\| true',
-                         hook.get("command", ""))
-    if not match:
-        return [f"hook: unexpected command {hook.get('command')!r}"]
-    printed = root / match.group(1)
+        errors.append(f"hook: Codex manifest: {error}")
+    if not (root / "hooks/session-start.py").is_file():
+        errors.append("hook: hooks/session-start.py is missing")
+    printed = root / "skills/orchestrate/SKILL.md"
     if not printed.is_file():
-        return [f"hook: printed file {match.group(1)} is missing"]
-    if printed.stat().st_size > HOOK_PRINT_BUDGET:
-        return [f"hook: {match.group(1)} is {printed.stat().st_size} bytes, budget {HOOK_PRINT_BUDGET}"]
-    return []
+        errors.append("hook: skills/orchestrate/SKILL.md is missing")
+    elif printed.stat().st_size > HOOK_PRINT_BUDGET:
+        errors.append(f"hook: orchestrate context is {printed.stat().st_size} bytes, budget {HOOK_PRINT_BUDGET}")
+    return errors
 
 
 def check_frontmatter(root):

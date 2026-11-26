@@ -2,6 +2,15 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/), see [RELEASING.md](RELEASING.md).
 
+## [1.1.0] - unreleased
+
+Merge, tag and release need the owner's explicit approval.
+
+### Changed
+- Use one `agentic-harness` marketplace and a stable user installation per client, with native update and a tag-based user rollback.
+- Readiness reports the installed artifact version and retains the project rules and v2 configuration checks. Project-scoped marketplace declarations are no longer required.
+- Claude Code and Codex SessionStart hooks report the effective version. The Claude Code hook retains the existing orchestration context.
+
 ## [1.0.0] - 2026-11-25
 
 First release candidate. Merge, tag and release need the owner's explicit approval; none has been done.

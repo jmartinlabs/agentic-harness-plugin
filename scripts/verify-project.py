@@ -2,15 +2,16 @@
 """Read-only readiness probe. Resolve artifact and project independently."""
 import argparse
 import json
-import re
 import sys
 from pathlib import Path
 
 COORDINATORS = ("claude", "codex", "opencode", "hermes")
 ARTIFACT = Path(__file__).resolve().parent.parent
+# Packaged native manifests agree on the artifact version (checked by validate-core).
+MANIFEST = ".claude-plugin/plugin.json"
 # Plugin-owned capabilities that a project should not shadow with local copies.
 PLUGIN_OWNED = (".agents/skills", ".agents/roles", ".claude/skills", ".claude/agents",
-                ".opencode/agents", ".codex", "specs/methodology")
+                ".opencode/agents", ".codex/hooks.json", "specs/methodology")
 TEMPLATES = "templates"
 SHIM_RULES = ("agentic-verify-project", "agentic-work-issue", "agentic-relay",
               "agentic-check-delegation-route", "agentic-usage-report", "agentic-usage-auto")
@@ -69,26 +70,6 @@ def plugin_owned_paths(root):
     return found
 
 
-def project_pin(root, version):
-    """Informational only: the ref of the agentic-harness marketplace in the project's Claude settings."""
-    ref = None
-    for name in (".claude/settings.json", ".claude/settings.local.json"):
-        try:
-            data = json.loads((root / name).read_text(encoding="utf-8"))
-            value = data["extraKnownMarketplaces"]["agentic-harness"]["source"].get("ref")
-        except (OSError, ValueError, KeyError, TypeError, AttributeError):
-            continue
-        if isinstance(value, str) and value:
-            ref = value
-    if ref is None:
-        return None, "absent"
-    if ref == f"v{version}":
-        return ref, "tag-match"
-    if re.fullmatch(r"v\d+\.\d+\.\d+", ref):
-        return ref, "tag-mismatch"
-    return ref, "sha-or-branch"
-
-
 def inventory_root(start):
     start = start.resolve(strict=True)
     if start.is_file():
@@ -103,8 +84,7 @@ def inventory(project):
     root = inventory_root(project)
     if root == ARTIFACT:
         raise ValueError("select a project checkout distinct from the installed artifact")
-    version = json.loads(file_under(ARTIFACT, "plugin.json").read_text(encoding="utf-8"))["version"]
-    pin, pin_status = project_pin(root, version)
+    version = json.loads(file_under(ARTIFACT, MANIFEST).read_text(encoding="utf-8"))["version"]
     return {
         "artifact_root": str(ARTIFACT),
         "artifact_version": version,
@@ -112,8 +92,6 @@ def inventory(project):
         "entry_files": {name: (root / name).is_file()
                         for name in ("AGENTS.md", "CLAUDE.md", "specs/project-rules.md")},
         "plugin_owned_paths_in_project": plugin_owned_paths(root),
-        "project_pin": pin,
-        "pin_status": pin_status,
     }
 
 
@@ -122,7 +100,7 @@ def main():
     parser.add_argument("--project", type=Path, default=Path.cwd())
     parser.add_argument("--coordinator", choices=COORDINATORS)
     parser.add_argument("--print-rules", action="store_true",
-                        help="print the .claude/settings.local.json permission rules for this plugin and exit; writes nothing")
+                        help="print the Claude permission rules for this plugin and exit; writes nothing")
     parser.add_argument("--inventory", action="store_true",
                         help="read-only inventory for a project not yet adopted: needs only a Git root, no entry files")
     args = parser.parse_args()
@@ -143,7 +121,7 @@ def main():
         rules = file_under(root, "specs/project-rules.md")
         approvals = file_under(ARTIFACT, "methodology/approvals.md")
         role = file_under(ARTIFACT, "roles/qa-review.md")
-        manifest = file_under(ARTIFACT, "plugin.json")
+        manifest = file_under(ARTIFACT, MANIFEST)
         config = None
         if args.coordinator:
             relative = f".agents/harnesses/{args.coordinator}.json"
@@ -151,12 +129,9 @@ def main():
             if path.exists() or path.is_symlink():
                 config = file_under(root, relative)
         version = json.loads(manifest.read_text(encoding="utf-8"))["version"]
-        pin, pin_status = project_pin(root, version)
         print(json.dumps({
             "artifact_root": str(ARTIFACT),
             "artifact_version": version,
-            "project_pin": pin,
-            "pin_status": pin_status,
             "project_root": str(root),
             "project_rules": str(rules),
             "plugin_owned_paths_in_project": plugin_owned_paths(root),
