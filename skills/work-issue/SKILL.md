@@ -25,7 +25,7 @@ of re-deriving its rules. `@work-issue opencode` asks the agent to run one sessi
 
 - A request to take work (`work-issue`, `@work-issue opencode`, "take a Ready Issue"), `--repo OWNER/NAME`,
   optionally `--project N` and `--owner ORG`, and the agent identity: the client actually running the
-  orchestration (`claude` in Claude Code, `codex`, `hermes`, `opencode`), never a role and never another
+  orchestration (`claude` in Claude Code, `codex`, `hermes`, `opencode`, `antigravity`), never a role and never another
   agent's. Pass it as `--agent` on every call that takes or moves an Issue. With no agent named, the
   session works the Issues without an agent label plus those labelled for its client; another agent's
   Issues are reported, never taken. `$work-issue` alone is a complete instruction.
@@ -60,7 +60,7 @@ as evidence.
    The agent writes no status. Deliver a report with an explicit review request; a block records
    `Previous Status`, reason, owner and exit condition in the Issue.
 3. **Route and check.** The canonical label is `agent:X` (bare `X` is an alias) over the catalogue
-   `opencode`, `hermes`, `codex`, `claude` (replaceable with `agents:` in `.agents/tracker.local.yaml`). No
+   `opencode`, `hermes`, `codex`, `claude`, `antigravity` (replaceable with `agents:` in `.agents/tracker.local.yaml`). No
    label means any compatible agent; two labels, an unknown agent, another agent's claim or an open or
    unverifiable dependency mean report and wait. Never change another agent's label. The tool enforces
    these checks.
