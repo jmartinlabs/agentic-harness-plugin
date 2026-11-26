@@ -1,0 +1,39 @@
+# Example Hermes profile snippet for role-aligned native delegation.
+# Copy manually into your Hermes profile config and replace placeholders
+# with connected providers and verified models. Restart Hermes after editing.
+delegation:
+  backend: model_map
+  backends:
+    model_map:
+      options: # Must be a YAML list, not a mapping
+        - name: worker
+          description: "General development tasks."
+          provider: <connected-provider>
+          model: <verified-model>
+          reasoning_effort: high
+        - name: implementation
+          description: "DEV: approved implementation, tests, and refactoring."
+          provider: <connected-provider>
+          model: <verified-model>
+          reasoning_effort: high
+        - name: functional
+          description: "Functional analysis, brainstorming, and draft specs."
+          provider: <connected-provider>
+          model: <verified-model>
+          reasoning_effort: low
+        - name: review
+          description: "Independent critical technical review."
+          provider: <connected-provider>
+          model: <verified-model>
+          reasoning_effort: high
+        - name: qa
+          description: "Independent candidate QA and acceptance verification."
+          provider: <connected-provider>
+          model: <verified-model>
+          reasoning_effort: high
+        - name: infrastructure
+          description: "Environments, CI, ports, and platform diagnostics."
+          provider: <connected-provider>
+          model: <verified-model>
+          reasoning_effort: medium
+      default: worker
