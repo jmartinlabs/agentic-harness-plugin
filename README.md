@@ -2,7 +2,7 @@
 
 The `agentic` plugin supplies shared skills, roles, methodology, templates and tools from one marketplace, `agentic-harness`. Each project keeps its own rules (`specs/project-rules.md`), v2 harness configuration (`.agents/harnesses/<coordinator>.json`) and application files.
 
-- **Current stable release:** `v1.2.1` (tracking the `stable` channel).
+- **Current stable release:** `v1.2.2` (tracking the `stable` channel).
 - **Requirements:** Python 3.10+ for hooks, readiness diagnostics and CLI tools.
 
 ---
@@ -84,6 +84,8 @@ Optional global symlink on `PATH`:
 ```sh
 ln -sfn <plugin-root>/scripts/update-agentic ~/.local/bin/update-agentic
 ```
+
+If Codex has multiple cached versions without a pinned version in `config.toml`, `update-agentic` selects the highest SemVer cached version as the estimated active installation.
 
 Or run the command for your individual client and start a new session. Updates apply to all projects in that client profile.
 
