@@ -460,7 +460,7 @@ sesión.
 | D4 | Raíz de instrucciones compartida | Priorizarla y comprobar que todos la leen |
 | D5 | Orden de validación | El de §11 |
 | D6 | Momento de modificar el plugin | Después de validar y pilotar |
-| D7 | Issue del piloto | De bajo riesgo. Candidata: aviso de perfiles Hermes sin skills en `update-agentic --check`; sin autorizar ni crear |
+| D7 | Issue del piloto | Ejecutada en #36 / PR #37 (aviso de perfiles Hermes sin skills en `update-agentic --check`, §14) |
 | D8 | Política de cuotas de §7.6 (25 % y 5 %) | Mantenerla como propuesta pendiente de incorporar al plugin (origen: política previa con Codex) |
 | D9 | Reglas de proyecto de este repositorio, ausentes para `verify-project` | Registrar la limitación en el piloto |
 | D10 | Alcance de soporte para Hermes y Antigravity | Antigravity por ruta; Hermes después |
@@ -483,7 +483,7 @@ correspondiente.
 | 1 | Coordinador Antigravity Hydrogen | Lee la instalación compartida, delega por T3, no ejecuta trabajo técnico y se reactiva |
 | 2 | Coordinador OpenCode DeepSeek | Igual |
 | 3 | Coordinador Codex | Igual |
-| 4 | Piloto con una issue real de bajo riesgo | Intervención solo en gates; QA sobre el SHA correcto; restricciones comprobadas; consumo y cuotas registrados |
+| 4 | Piloto con una issue real de bajo riesgo (**completada**, §14) | Intervención solo en gates; QA sobre el SHA correcto; restricciones comprobadas; consumo y cuotas registrados |
 | 5 | Configuración declarativa definitiva | Esquema y necesidad de cambios en el validador |
 | 6 | Recuperación tras interrupciones y agotamiento de cuota | Estado correcto, sin duplicados ni sustituciones no autorizadas; sin provocar el agotamiento |
 | 7 | Cambios mínimos de Agentic Harness | Decisión, no prueba |
@@ -534,3 +534,75 @@ hecho pruebas nuevas para verificarla.
 Criterio de clasificación: en §9.1 solo figura lo que el propietario formuló como requisito, aceptación o
 restricción propia. El resto de la revisión se recoge como propuesta pendiente, aunque esté redactado en
 imperativo.
+
+## 14. Piloto práctico inicial (2026-11-26)
+
+### 14.1 Alcance y entrega
+
+| Elemento | Valor |
+|---|---|
+| Issue y PR | #36 · PR #37 (base `main`, HEAD aprobado `cdda36c`, merge `60d4a46`) |
+| Issue de seguimiento | #38 (symlink cíclico en `${HERMES_HOME}/skills`, sin implementar) |
+| Comportamiento entregado | `update-agentic --check` detecta perfiles de Hermes bajo `${HERMES_HOME}/profiles/*/` sin symlinks a `<shared>/skills` |
+| Alcance y modo | *Advisory* y de solo lectura (sin escritura ni reparación). Archivos o subdirectorios internos no cuentan; `skills/` enlazado exactamente al compartido se considera cubierto |
+
+### 14.2 Rutas solicitadas y observadas
+
+| Rol | Ruta solicitada | Sesiones / turnos | Identidad observada |
+|---|---|---|---|
+| Implementación | `antigravity/gemini-4-hydrogen/thought_level=medium` | 1 sesión, 5 turnos | `executedModel=null` (no verificable por T3) |
+| QA | `opencode/alibaba-token-plan/deepseek-v4.1-flash-1017/variant=low` | 6 sesiones nuevas | `executedModel=null` (no verificable por T3) |
+| Review | `codex/gpt-6.1-terra/reasoningEffort=low` | 5 sesiones nuevas | `executedModel=null` (no verificable por T3) |
+
+### 14.3 Verificación y evidencia de pruebas
+
+- **Rondas**: 5 rondas de validación y 4 de corrección.
+- **Hallazgos**: 5 defectos funcionales y 2 carencias documentales detectados (fallback de checkout, perfiles ocultos, límite de un enlace, `RuntimeError` con symlink cíclico, caso A de archivo o subdirectorio interno, caso B de `skills/` enlazado, y borde de `skills/` apuntando a otro checkout con enlace interno).
+- **Criterio de veredicto**: QA dio `APTO` en rondas donde review u owner hallaron defectos.
+- **Pruebas locales**: 105 tests `unittest` OK (1 *skip* preexistente), `validate-core` OK, `work-issue` 208, `agent-relay` 26, `delegation-route` 26, `agent-usage` 9, `auto-agent-usage` 8.
+- **CI**: `pilot` (3.10/3.12), `claude-validate` y `required` en verde.
+
+### 14.4 Consumo y duración
+
+Consumo según telemetría local real (tokens):
+
+| Rol / ámbito | Sesiones | Entrada nueva | Caché | Salida |
+|---|---:|---:|---:|---:|
+| QA + verificación | 6 | 270.231 | 4.388.992 | 53.958 |
+| Review | 5 | 102.352 | 700.800 | 7.417 |
+| Coordinador | — | 185.432 | 13.048.576 | 36.981 |
+
+Antigravity no expone uso legible.
+
+Duración registrada:
+
+| Fase / rol | Duración |
+|---|---|
+| Implementación | 255 s (fase 1) + 141 s (correcciones de review del owner) |
+| QA | 416 s + 315 s |
+| Review | 134 s + 89 s |
+
+### 14.5 Intervenciones humanas
+
+- 1 gate de fase (mover #36 a `Ready Development`).
+- Autorización, «Ready» y revisión con dos casos.
+- Aprobación de merge separada.
+
+### 14.6 Conclusiones, limitaciones y decisión
+
+**Conclusiones:**
+
+- Autonomía del coordinador sin trabajo técnico.
+- El contexto del coordinador domina el consumo.
+- Reutilizar al implementador para correcciones acotadas.
+- QA y review siempre en sesión nueva.
+- Modelos distintos aportan modos de fallo distintos y no sustituyen la revisión humana.
+
+**Limitaciones:**
+
+- **T3**: sin `executedModel` ni telemetría de tokens nativa; el worktree parte del commit padre; sin historial del padre; gate del Project humano.
+- **Agentic Harness**: falta `.agents/tracker.local.yaml` y `AGENTS.md` en este repositorio; defecto preexistente en `${HERMES_HOME}/skills` registrado en #38.
+
+**Decisión:**
+
+- Evaluación práctica inicial de T3 finalizada satisfactoriamente; sin release ni cambios de integración con T3; diseño definitivo en una sesión nueva.
