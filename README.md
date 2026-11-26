@@ -69,7 +69,23 @@ Hermes loads skills natively at user scope. Clone `stable` once per user and sym
 
 ### Update
 
-Run the command for your client and start a new session. Updates apply to all projects in that client profile.
+To check or update all installed clients in one step (without installing missing clients or starting AI sessions), run `scripts/update-agentic`:
+
+```sh
+# Read-only status and version check across all supported clients
+python3 <plugin-root>/scripts/update-agentic --check
+
+# Update all installed clients
+python3 <plugin-root>/scripts/update-agentic
+```
+
+Optional global symlink on `PATH`:
+
+```sh
+ln -sfn <plugin-root>/scripts/update-agentic ~/.local/bin/update-agentic
+```
+
+Or run the command for your individual client and start a new session. Updates apply to all projects in that client profile.
 
 ```sh
 # Claude Code
