@@ -149,6 +149,21 @@ class HookTests(unittest.TestCase):
                 else:
                     self.assertEqual(list(report), ["systemMessage"])
 
+    def test_codex_hooks_wire_session_start_and_auto_agent_usage(self):
+        config = json.loads((ROOT / "hooks/codex.json").read_text(encoding="utf-8"))
+        hooks = config["hooks"]
+        self.assertEqual(set(hooks), {"SessionStart", "Stop", "SubagentStop", "SessionEnd"})
+        session_start = hooks["SessionStart"][0]["hooks"][0]
+        self.assertEqual(session_start["type"], "command")
+        self.assertEqual(session_start["command"], 'python3 "${PLUGIN_ROOT}/hooks/session-start.py"')
+        for event in ("Stop", "SubagentStop", "SessionEnd"):
+            with self.subTest(event=event):
+                hook = hooks[event][0]["hooks"][0]
+                self.assertEqual(hook["type"], "command")
+                self.assertEqual(hook["command"], 'python3 "${PLUGIN_ROOT}/scripts/auto-agent-usage"')
+                self.assertEqual(hook["timeout"], 3)
+                self.assertNotIn("async", hook)
+
 
 class FrontmatterTests(unittest.TestCase):
     def test_skills_name_matches_directory_and_description_present(self):

@@ -118,16 +118,15 @@ class AutoTests(unittest.TestCase):
                                                   capture_output=True, text=True).stdout), {})
 
     def test_configuration_is_only_local_advisory_lifecycle_hooks(self):
-        hooks = ROOT / '.codex/hooks.json'
-        if not hooks.is_file():
-            self.skipTest('Codex hook wiring (.codex/hooks.json) ships in a later increment')
+        hooks = ROOT / 'hooks/codex.json'
+        self.assertTrue(hooks.is_file(), 'Expected hooks/codex.json to exist')
         config = json.loads(hooks.read_text())
-        self.assertEqual(set(config['hooks']), {'Stop', 'SubagentStop', 'SessionEnd'})
-        for groups in config['hooks'].values():
-            hook = groups[0]['hooks'][0]
+        self.assertEqual(set(config['hooks']), {'SessionStart', 'Stop', 'SubagentStop', 'SessionEnd'})
+        for event in ('Stop', 'SubagentStop', 'SessionEnd'):
+            hook = config['hooks'][event][0]['hooks'][0]
             self.assertEqual(hook['type'], 'command')
-            self.assertLessEqual(hook['timeout'], 3)
-            self.assertIn('scripts/auto-agent-usage', hook['command'])
+            self.assertEqual(hook['timeout'], 3)
+            self.assertEqual(hook['command'], 'python3 "${PLUGIN_ROOT}/scripts/auto-agent-usage"')
             self.assertNotIn('async', hook)
 
 
