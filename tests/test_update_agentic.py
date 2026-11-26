@@ -48,8 +48,18 @@ def _setup_shared_harnesses(home: Path, shared_repo: Path, version: str = "1.2.0
     (ag_parent / "agentic").symlink_to(shared_repo)
 
 
-def _setup_codex_manifest(codex_home: Path, version: str = "1.2.0") -> Path:
-    plugin_root = codex_home / "marketplaces" / "agentic-harness" / "agentic"
+def _write_codex_config(codex_home: Path, enabled: bool = True, version: str | None = None) -> None:
+    codex_home.mkdir(parents=True, exist_ok=True)
+    lines = ['[plugins."agentic@agentic-harness"]', f"enabled = {'true' if enabled else 'false'}"]
+    if version is not None:
+        lines.append(f'version = "{version}"')
+    (codex_home / "config.toml").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _setup_codex_manifest(codex_home: Path, version: str = "1.2.0", write_config: bool = True) -> Path:
+    if write_config:
+        _write_codex_config(codex_home, enabled=True)
+    plugin_root = codex_home / "plugins" / "cache" / "agentic-harness" / "agentic" / version
     _write_manifest(plugin_root, version, ".codex-plugin/plugin.json")
     return plugin_root
 
@@ -287,14 +297,15 @@ class UpdateAgenticTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp) / "home"
             codex_home = home / ".codex"
-            codex_root = codex_home / "marketplaces" / "agentic-harness" / "agentic"
+            _write_codex_config(codex_home, enabled=True)
+            codex_root = codex_home / "plugins" / "cache" / "agentic-harness" / "agentic" / "1.2.0"
             manifest = codex_root / ".codex-plugin" / "plugin.json"
             manifest.parent.mkdir(parents=True, exist_ok=True)
             manifest.write_text(json.dumps({"name": "agentic"}), encoding="utf-8")
 
             def fake_runner(cmd, cwd, timeout):
                 if cmd[:4] == ["codex", "plugin", "marketplace", "upgrade"]:
-                    _write_manifest(codex_root, "1.2.1", ".codex-plugin/plugin.json")
+                    _setup_codex_manifest(codex_home, version="1.2.1", write_config=False)
                     return CommandResult(0, "ok\n")
                 raise AssertionError(f"Unexpected command: {cmd}")
 
@@ -308,6 +319,92 @@ class UpdateAgenticTests(unittest.TestCase):
             by_name = {r.harness: r for r in results}
             self.assertEqual(by_name["codex"].status, "error")
             self.assertIn("before/after", by_name["codex"].detail)
+
+    def test_codex_multi_version_cache_ignores_marketplace_and_respects_config_enabled(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            codex_home = home / ".codex"
+
+            # Coexisting cached versions (including 1.10.0 > 1.2.1 numeric SemVer) + decoy 9.9.9 in marketplaces/
+            _setup_codex_manifest(codex_home, version="1.1.0", write_config=False)
+            _setup_codex_manifest(codex_home, version="1.2.0", write_config=False)
+            _setup_codex_manifest(codex_home, version="1.2.1", write_config=False)
+            _write_manifest(
+                codex_home / "marketplaces" / "agentic-harness",
+                "9.9.9",
+                ".codex-plugin/plugin.json",
+            )
+
+            # 1. Missing config.toml -> not-installed even though cache & marketplace exist
+            res_missing = {
+                r.harness: r
+                for r in run_all(
+                    check_only=True,
+                    home=home,
+                    env={"CODEX_HOME": str(codex_home)},
+                    runner=lambda *_: (_ for _ in ()).throw(AssertionError("unexpected call")),
+                    which=lambda name: "/usr/bin/codex" if name == "codex" else None,
+                )
+            }
+            self.assertEqual(res_missing["codex"].status, "not-installed")
+
+            # 2. enabled = false -> not-installed
+            _write_codex_config(codex_home, enabled=False)
+            res_disabled = {
+                r.harness: r
+                for r in run_all(
+                    check_only=True,
+                    home=home,
+                    env={"CODEX_HOME": str(codex_home)},
+                    runner=lambda *_: (_ for _ in ()).throw(AssertionError("unexpected call")),
+                    which=lambda name: "/usr/bin/codex" if name == "codex" else None,
+                )
+            }
+            self.assertEqual(res_disabled["codex"].status, "not-installed")
+
+            # 3. enabled = true -> picks highest SemVer in cache (1.2.1), ignores marketplace 9.9.9
+            _write_codex_config(codex_home, enabled=True)
+            res_highest = {
+                r.harness: r
+                for r in run_all(
+                    check_only=True,
+                    home=home,
+                    env={"CODEX_HOME": str(codex_home)},
+                    runner=lambda *_: (_ for _ in ()).throw(AssertionError("unexpected call")),
+                    which=lambda name: "/usr/bin/codex" if name == "codex" else None,
+                )
+            }
+            self.assertEqual(res_highest["codex"].status, "installed")
+            self.assertEqual(res_highest["codex"].version_before, "1.2.1")
+
+            # 4. Numeric SemVer beats lexicographic order (1.10.0 > 1.2.1)
+            _setup_codex_manifest(codex_home, version="1.10.0", write_config=False)
+            res_semver = {
+                r.harness: r
+                for r in run_all(
+                    check_only=True,
+                    home=home,
+                    env={"CODEX_HOME": str(codex_home)},
+                    runner=lambda *_: (_ for _ in ()).throw(AssertionError("unexpected call")),
+                    which=lambda name: "/usr/bin/codex" if name == "codex" else None,
+                )
+            }
+            self.assertEqual(res_semver["codex"].version_before, "1.10.0")
+
+            # 5. Explicit version in config.toml selects that exact cached version
+            _write_codex_config(codex_home, enabled=True, version="1.2.0")
+            res_pinned = {
+                r.harness: r
+                for r in run_all(
+                    check_only=True,
+                    home=home,
+                    env={"CODEX_HOME": str(codex_home)},
+                    runner=lambda *_: (_ for _ in ()).throw(AssertionError("unexpected call")),
+                    which=lambda name: "/usr/bin/codex" if name == "codex" else None,
+                )
+            }
+            self.assertEqual(res_pinned["codex"].status, "installed")
+            self.assertEqual(res_pinned["codex"].version_before, "1.2.0")
 
     def test_default_runner_handles_timeout_expired(self):
         with mock.patch("subprocess.run", side_effect=subprocess.TimeoutExpired(["claude"], 5)) as mock_run:

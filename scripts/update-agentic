@@ -19,6 +19,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Optional, Sequence
 
+try:
+    import tomllib  # type: ignore[import-not-found]
+except ModuleNotFoundError:  # Python 3.10 fallback
+    tomllib = None
+
 PLUGIN_ID = "agentic@agentic-harness"
 MARKETPLACE_NAME = "agentic-harness"
 SHARED_BRANCH = "stable"
@@ -119,16 +124,103 @@ def _parse_claude_plugin(stdout: str) -> Optional[dict]:
     return None
 
 
-def _find_codex_manifest(codex_home: Path) -> Optional[Path]:
-    if not codex_home.is_dir():
+SEMVER_RE = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$")
+
+
+def _semver_key(text: str) -> Optional[tuple[int, int, int, int, str]]:
+    match = SEMVER_RE.match(text.strip())
+    if not match:
         return None
-    for manifest in sorted(codex_home.rglob(".codex-plugin/plugin.json")):
+    major, minor, patch, pre = match.groups()
+    return (int(major), int(minor), int(patch), 0 if pre else 1, pre or "")
+
+
+def _read_codex_plugin_config(codex_home: Path) -> Optional[dict]:
+    """Return [plugins."agentic@agentic-harness"] config dict if enabled = true, else None."""
+    cfg_path = codex_home / "config.toml"
+    if not cfg_path.is_file():
+        return None
+    try:
+        raw = cfg_path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+    if tomllib is not None:
+        try:
+            data = tomllib.loads(raw)
+        except Exception:  # noqa: BLE001
+            return None
+        plugins = data.get("plugins")
+        entry = plugins.get(PLUGIN_ID) if isinstance(plugins, dict) else None
+        return entry if isinstance(entry, dict) and entry.get("enabled") is True else None
+
+    # Minimal Python 3.10 fallback for [plugins."agentic@agentic-harness"]
+    in_section = False
+    entry: dict[str, object] = {}
+    target_header = f'[plugins."{PLUGIN_ID}"]'
+    for line in raw.splitlines():
+        stripped = line.split("#", 1)[0].strip()
+        if not stripped:
+            continue
+        if stripped.startswith("[") and stripped.endswith("]"):
+            in_section = stripped == target_header
+            continue
+        if in_section and "=" in stripped:
+            key, val = (part.strip() for part in stripped.split("=", 1))
+            if val == "true":
+                entry[key] = True
+            elif val == "false":
+                entry[key] = False
+            elif len(val) >= 2 and val[0] == val[-1] and val[0] in ('"', "'"):
+                entry[key] = val[1:-1]
+    return entry if entry.get("enabled") is True else None
+
+
+def _find_codex_manifest(codex_home: Path, pinned_version: Optional[str] = None) -> Optional[Path]:
+    """Locate active Codex plugin manifest strictly under plugins/cache/agentic-harness/agentic/<ver>."""
+    cache_root = codex_home / "plugins" / "cache" / MARKETPLACE_NAME / "agentic"
+    if not cache_root.is_dir():
+        return None
+
+    if pinned_version:
+        manifest = cache_root / pinned_version / ".codex-plugin" / "plugin.json"
+        if manifest.is_file():
+            try:
+                data = json.loads(manifest.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                return None
+            return manifest if data.get("name") == "agentic" else None
+        return None
+
+    valid_candidates: list[tuple[tuple[int, int, int, int, str], Path]] = []
+    fallback_candidates: list[tuple[tuple[int, int, int, int, str], Path]] = []
+    for child in cache_root.iterdir():
+        if not child.is_dir():
+            continue
+        key = _semver_key(child.name)
+        if key is None:
+            continue
+        manifest = child / ".codex-plugin" / "plugin.json"
+        if not manifest.is_file():
+            continue
         try:
             data = json.loads(manifest.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             continue
-        if data.get("name") == "agentic" or MARKETPLACE_NAME in str(manifest):
-            return manifest
+        if data.get("name") != "agentic":
+            continue
+        version = data.get("version")
+        if isinstance(version, str) and version.strip():
+            valid_candidates.append((key, manifest))
+        else:
+            fallback_candidates.append((key, manifest))
+
+    if valid_candidates:
+        valid_candidates.sort(key=lambda item: item[0])
+        return valid_candidates[-1][1]
+    if fallback_candidates:
+        fallback_candidates.sort(key=lambda item: item[0])
+        return fallback_candidates[-1][1]
     return None
 
 
@@ -258,9 +350,15 @@ def update_codex(
 ) -> HarnessResult:
     if not which("codex"):
         return HarnessResult("codex", "not-installed", detail="codex CLI not found")
-    manifest = _find_codex_manifest(codex_home)
+    cfg = _read_codex_plugin_config(codex_home)
+    if cfg is None:
+        return HarnessResult("codex", "not-installed", detail=f"{PLUGIN_ID} not enabled in {codex_home / 'config.toml'}")
+
+    raw_pin = cfg.get("version")
+    pinned = raw_pin.strip() if isinstance(raw_pin, str) and raw_pin.strip() else None
+    manifest = _find_codex_manifest(codex_home, pinned_version=pinned)
     if manifest is None:
-        return HarnessResult("codex", "not-installed", detail=f"no local {PLUGIN_ID} manifest in {codex_home}")
+        return HarnessResult("codex", "not-installed", detail=f"no cached {PLUGIN_ID} manifest in {codex_home}")
 
     ver_before = read_manifest_version(manifest.parent.parent, (".codex-plugin/plugin.json",))
     if check_only:
@@ -270,8 +368,15 @@ def update_codex(
     if upd.returncode != 0:
         return HarnessResult("codex", "error", ver_before, detail=_err(upd))
 
-    after_manifest = _find_codex_manifest(codex_home) or manifest
-    ver_after = read_manifest_version(after_manifest.parent.parent, (".codex-plugin/plugin.json",))
+    after_cfg = _read_codex_plugin_config(codex_home) or cfg
+    raw_after_pin = after_cfg.get("version")
+    after_pin = raw_after_pin.strip() if isinstance(raw_after_pin, str) and raw_after_pin.strip() else None
+    after_manifest = _find_codex_manifest(codex_home, pinned_version=after_pin)
+    ver_after = (
+        read_manifest_version(after_manifest.parent.parent, (".codex-plugin/plugin.json",))
+        if after_manifest is not None
+        else None
+    )
     if not ver_before or not ver_after:
         return HarnessResult(
             "codex", "error", ver_before, ver_after, detail="could not verify version before/after update"
