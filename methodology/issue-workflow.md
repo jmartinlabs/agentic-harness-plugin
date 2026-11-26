@@ -7,7 +7,7 @@ Native GitHub workflow for authorized work in Issues, extending [adaptive workfl
 - **Planning statuses:** `Backlog`, `Todo`, `In progress`, `In review`, `Done`, `Not planned`, `Duplicate`.
 - **Write:** `gh api -X PATCH repos/{owner}/{repo}/issues/{n} -f status="In progress"` (`gh` has no `--status`).
 - **Verified transition limits:**
-  - With a ready PR and `Closes`, `Todo` and `In progress` are overwritten to `In review`; with `Refs`, they are preserved.
+  - On creation or when marked ready, a ready PR with `Closes` overwrites `Todo`/`In progress` to `In review` (not continuously; a subsequent manual `PATCH` persists). With `Refs`, `Todo`/`In progress` are preserved.
   - A draft PR may not move `Todo` → `In progress`: always reserve manually.
   - Reopening a ready PR forces `In review`: do not close/reopen PRs during ordinary fixes.
   - Submitting a review does not change status; returning to `Todo` is manual.
@@ -29,8 +29,8 @@ Create sub-issues in `Backlog` with native `blocked_by` dependencies; creating a
 
 - **Continuous queue & authorization:** `Todo` authorizes execution; open `blocked_by` dependencies block start. Process eligible `Todo` Issues sequentially and recompute the queue after each delivery, without duplicate reports.
 - **No assignees:** Never use GitHub assignees (assigning moves `Backlog` → `Todo` and does not revert). Route via `agent:<client>` (`claude`, `codex`, `opencode`, `hermes`, `antigravity`); no label means any compatible client.
-- **Soft reservation & concurrency (no CAS):** Re-read status and comments after `PATCH` + start comment (status alone cannot detect concurrency). If another agent's start comment exists, oldest wins and the other stops without writing and reports; if order is unclear or two own reservations exist, stop and ask.
-- **Rejected review:** With `Closes` + ready PR, move PR to draft (`In review` → `In progress`) then `Todo`; with `Refs`, return to `Todo` directly. Reuse the existing branch/PR, read only pending findings, resume in `In progress`, fix, and return to `In review`.
+- **Single coordinator & soft reservation (no CAS):** Concurrent coordinators per repository are unsupported; reservation is soft and the settling window reduces but does not eliminate races. Reserve with `PATCH` `"In progress"` + `Reserva: <agente> · ronda: <enlace al comentario de rechazo | inicial> · <alcance>` (`inicial` or latest authorization comment on reopen; only current-round reservations count). Re-read once after ≈10–15 s (no polling): if another same-round reservation exists, oldest server timestamp wins and the other stops without writing and reports; if order is unclear or two own reservations exist, stop and ask.
+- **Rejected review:** Record an identifiable rejection comment (link, opening a new round). With `Closes` + ready PR, move PR to draft (`In review` → `In progress`) then `Todo`; with `Refs`, return to `Todo` directly. Reuse the existing branch/PR, read only pending findings, resume in `In progress`, fix, and return to `In review`.
 
 ## Closure, gates & traceability
 
