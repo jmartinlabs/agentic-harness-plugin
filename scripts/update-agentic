@@ -2,8 +2,8 @@
 """Check or update Agentic Harness installations across supported clients.
 
 Supports Claude Code, Codex CLI, OpenCode, Hermes Agent, and Antigravity.
-Uses Python 3 standard library only, never installs missing clients, never
-overwrites user config, never trusts hooks, and never starts AI sessions.
+Uses Python 3 stdlib only, never installs missing clients, never overwrites
+user config, never trusts hooks, and never starts AI sessions.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ import os
 import re
 import shutil
 import subprocess
-import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Optional, Sequence
@@ -22,12 +22,16 @@ from typing import Callable, Optional, Sequence
 PLUGIN_ID = "agentic@agentic-harness"
 MARKETPLACE_NAME = "agentic-harness"
 SHARED_BRANCH = "stable"
-MANIFEST_CANDIDATES = (
+COMMAND_TIMEOUT = 30
+ORIGIN_RE = re.compile(
+    r"^(?:https://github\.com/|git@github\.com:|ssh://git@github\.com/)"
+    r"jmartinlabs/agentic-harness-plugin(?:\.git)?/?$"
+)
+MANIFESTS = (
     ".claude-plugin/plugin.json",
     ".codex-plugin/plugin.json",
     ".antigravity-plugin/plugin.json",
 )
-VERSION_RE = re.compile(r"\bv?(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)\b")
 
 
 @dataclass
@@ -40,38 +44,40 @@ class CommandResult:
 @dataclass
 class HarnessResult:
     harness: str
-    status: str  # installed | updated | up-to-date | not-installed | error
+    status: str  # installed | updated | up-to-date | skipped | not-installed | error
     version_before: Optional[str] = None
     version_after: Optional[str] = None
     detail: str = ""
 
 
-Runner = Callable[[Sequence[str]], CommandResult]
+Runner = Callable[[Sequence[str], Optional[str], int], CommandResult]
 WhichFn = Callable[[str], Optional[str]]
 
 
-def default_runner(cmd: Sequence[str]) -> CommandResult:
+def default_runner(
+    cmd: Sequence[str],
+    cwd: Optional[str] = None,
+    timeout: int = COMMAND_TIMEOUT,
+) -> CommandResult:
     try:
         proc = subprocess.run(
-            list(cmd),
-            capture_output=True,
-            text=True,
-            check=False,
+            list(cmd), cwd=cwd, capture_output=True, text=True, check=False, timeout=timeout
         )
         return CommandResult(proc.returncode, proc.stdout, proc.stderr)
+    except subprocess.TimeoutExpired:
+        return CommandResult(124, "", f"command timed out after {timeout}s")
     except OSError as exc:
         return CommandResult(127, "", str(exc))
 
 
-def read_manifest_version(root: Path) -> Optional[str]:
-    for rel in MANIFEST_CANDIDATES:
+def read_manifest_version(root: Path, candidates: Sequence[str] = MANIFESTS) -> Optional[str]:
+    for rel in candidates:
         manifest = root / rel
         if manifest.is_file():
             try:
-                data = json.loads(manifest.read_text(encoding="utf-8"))
+                version = json.loads(manifest.read_text(encoding="utf-8")).get("version")
             except (OSError, json.JSONDecodeError):
                 continue
-            version = data.get("version")
             if isinstance(version, str) and version.strip():
                 return version.strip()
     return None
@@ -85,288 +91,201 @@ def _is_within(path: Path, parent: Path) -> bool:
         return False
 
 
-def _extract_error(result: CommandResult) -> str:
-    msg = (result.stderr or result.stdout or "").strip()
-    if not msg:
-        return f"command exited with status {result.returncode}"
-    first_line = msg.splitlines()[0].strip()
-    return first_line[:200]
+def _err(res: CommandResult) -> str:
+    msg = (res.stderr or res.stdout or "").strip()
+    return msg.splitlines()[0].strip()[:200] if msg else f"command exited with status {res.returncode}"
 
 
-def _parse_claude_plugins(stdout: str) -> Optional[dict]:
-    """Return matching plugin entry dict for agentic@agentic-harness, or None."""
-    text = stdout.strip()
-    if not text:
-        return None
-    data = json.loads(text)
-    entries = []
+def _safe_cwd(home: Path) -> str:
+    return str(home) if home.is_dir() else tempfile.gettempdir()
+
+
+def _parse_claude_plugin(stdout: str) -> Optional[dict]:
+    data = json.loads(stdout.strip() or "[]")
     if isinstance(data, list):
         entries = data
     elif isinstance(data, dict):
-        if isinstance(data.get("plugins"), list):
-            entries = data["plugins"]
-        elif isinstance(data.get("installed"), list):
-            entries = data["installed"]
-        elif PLUGIN_ID in data and isinstance(data[PLUGIN_ID], dict):
-            entry = dict(data[PLUGIN_ID])
-            entry.setdefault("id", PLUGIN_ID)
-            entries = [entry]
-        else:
-            for key, val in data.items():
-                if isinstance(val, dict):
-                    entry = dict(val)
-                    entry.setdefault("id", key)
-                    entries.append(entry)
-
+        entries = data.get("plugins") or data.get("installed") or [
+            {"id": k, **v} for k, v in data.items() if isinstance(v, dict)
+        ]
+    else:
+        entries = []
     for entry in entries:
         if not isinstance(entry, dict):
             continue
-        plugin_id = entry.get("id") or entry.get("pluginId") or entry.get("fullName")
-        name = entry.get("name")
-        marketplace = entry.get("marketplace")
-        if plugin_id == PLUGIN_ID or (name == "agentic" and marketplace == MARKETPLACE_NAME):
+        pid = entry.get("id") or entry.get("pluginId") or entry.get("fullName")
+        if pid == PLUGIN_ID or (entry.get("name") == "agentic" and entry.get("marketplace") == MARKETPLACE_NAME):
             return entry
     return None
 
 
-def _parse_codex_plugin_list(stdout: str) -> tuple[bool, Optional[str]]:
-    """Parse `codex plugin list` output (JSON or text) for agentic@agentic-harness."""
-    text = stdout.strip()
-    if not text:
-        return False, None
-    try:
-        data = json.loads(text)
-    except json.JSONDecodeError:
-        data = None
+def _find_codex_manifest(codex_home: Path) -> Optional[Path]:
+    if not codex_home.is_dir():
+        return None
+    for manifest in sorted(codex_home.rglob(".codex-plugin/plugin.json")):
+        try:
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if data.get("name") == "agentic" or MARKETPLACE_NAME in str(manifest):
+            return manifest
+    return None
 
-    if data is not None:
-        entries = []
-        if isinstance(data, list):
-            entries = data
-        elif isinstance(data, dict):
-            for key in ("plugins", "installed", "items"):
-                if isinstance(data.get(key), list):
-                    entries = data[key]
-                    break
-            if not entries and PLUGIN_ID in data and isinstance(data[PLUGIN_ID], dict):
-                entry = dict(data[PLUGIN_ID])
-                entry.setdefault("id", PLUGIN_ID)
-                entries = [entry]
-        for entry in entries:
-            if not isinstance(entry, dict):
-                continue
-            pid = entry.get("id") or entry.get("plugin") or entry.get("name")
-            marketplace = entry.get("marketplace")
-            if pid == PLUGIN_ID or (pid == "agentic" and marketplace == MARKETPLACE_NAME):
-                version = entry.get("version")
-                return True, str(version).strip() if version else None
-        return False, None
 
-    for line in text.splitlines():
-        if PLUGIN_ID in line:
-            match = VERSION_RE.search(line)
-            return True, match.group(1) if match else None
-    return False, None
+def _git_pull_verified(repo: Path, runner: Runner, timeout: int, version_before: Optional[str]) -> HarnessResult:
+    branch = runner(["git", "-C", str(repo), "rev-parse", "--abbrev-ref", "HEAD"], None, timeout)
+    if branch.returncode != 0:
+        return HarnessResult("git", "error", version_before, detail=_err(branch))
+    if branch.stdout.strip() != SHARED_BRANCH:
+        return HarnessResult(
+            "git", "error", version_before,
+            detail=f"expected branch '{SHARED_BRANCH}', found '{branch.stdout.strip()}'",
+        )
+
+    origin = runner(["git", "-C", str(repo), "remote", "get-url", "origin"], None, timeout)
+    if origin.returncode != 0:
+        return HarnessResult("git", "error", version_before, detail=_err(origin))
+    if not ORIGIN_RE.match(origin.stdout.strip()):
+        return HarnessResult(
+            "git", "error", version_before,
+            detail=f"unexpected origin URL: {origin.stdout.strip()}",
+        )
+
+    head_before = runner(["git", "-C", str(repo), "rev-parse", "HEAD"], None, timeout)
+    if head_before.returncode != 0:
+        return HarnessResult("git", "error", version_before, detail=_err(head_before))
+    sha_before = head_before.stdout.strip()
+
+    pull = runner(["git", "-C", str(repo), "pull", "--ff-only", "origin", SHARED_BRANCH], None, timeout)
+    if pull.returncode != 0:
+        return HarnessResult("git", "error", version_before, detail=_err(pull))
+
+    head_after = runner(["git", "-C", str(repo), "rev-parse", "HEAD"], None, timeout)
+    if head_after.returncode != 0:
+        return HarnessResult("git", "error", version_before, detail=_err(head_after))
+    sha_after = head_after.stdout.strip()
+    version_after = read_manifest_version(repo)
+
+    if not sha_before or not sha_after:
+        return HarnessResult("git", "error", version_before, detail="could not verify commit after pull")
+    changed = sha_before != sha_after or (version_before and version_after and version_before != version_after)
+    return HarnessResult("git", "updated" if changed else "up-to-date", version_before, version_after or version_before)
 
 
 class SharedRepoManager:
-    """Manages a single shared Git checkout so it is updated at most once."""
+    """Ensures the shared Git checkout is checked/updated at most once."""
 
-    def __init__(self, repo_path: Path, runner: Runner, check_only: bool) -> None:
+    def __init__(self, repo_path: Path, runner: Runner, check_only: bool, timeout: int) -> None:
         self.repo_path = repo_path
         self.runner = runner
         self.check_only = check_only
-        self._executed = False
+        self.timeout = timeout
         self._result: Optional[HarnessResult] = None
 
-    def ensure_processed(self) -> HarnessResult:
-        if self._executed and self._result is not None:
+    def process(self) -> HarnessResult:
+        if self._result is not None:
             return self._result
-
-        self._executed = True
         if not self.repo_path.exists():
-            self._result = HarnessResult(
-                harness="shared-repo",
-                status="error",
-                detail=f"shared repo not found at {self.repo_path}",
-            )
+            self._result = HarnessResult("shared", "error", detail=f"shared repo not found: {self.repo_path}")
             return self._result
-
         version_before = read_manifest_version(self.repo_path)
         if self.check_only:
             self._result = HarnessResult(
-                harness="shared-repo",
-                status="installed",
-                version_before=version_before,
-                version_after=version_before,
-                detail=f"shared repo: {self.repo_path}",
+                "shared", "installed", version_before, version_before, f"shared repo: {self.repo_path}"
             )
             return self._result
-
         if not (self.repo_path / ".git").exists():
             self._result = HarnessResult(
-                harness="shared-repo",
-                status="error",
-                version_before=version_before,
-                detail=f"shared path is not a git repository: {self.repo_path}",
+                "shared", "error", version_before, detail=f"not a git repository: {self.repo_path}"
             )
             return self._result
-
-        head_before = self.runner(["git", "-C", str(self.repo_path), "rev-parse", "HEAD"])
-        sha_before = head_before.stdout.strip() if head_before.returncode == 0 else None
-
-        pull = self.runner(
-            ["git", "-C", str(self.repo_path), "pull", "--ff-only", "origin", SHARED_BRANCH]
-        )
-        if pull.returncode != 0:
-            self._result = HarnessResult(
-                harness="shared-repo",
-                status="error",
-                version_before=version_before,
-                detail=_extract_error(pull),
-            )
-            return self._result
-
-        head_after = self.runner(["git", "-C", str(self.repo_path), "rev-parse", "HEAD"])
-        sha_after = head_after.stdout.strip() if head_after.returncode == 0 else None
-        version_after = read_manifest_version(self.repo_path)
-
-        changed = (
-            (version_before is not None and version_after is not None and version_before != version_after)
-            or (sha_before is not None and sha_after is not None and sha_before != sha_after)
-        )
-        status = "updated" if changed else "up-to-date"
-        self._result = HarnessResult(
-            harness="shared-repo",
-            status=status,
-            version_before=version_before,
-            version_after=version_after,
-            detail=f"shared repo: {self.repo_path}",
-        )
-        return self._result
+        res = _git_pull_verified(self.repo_path, self.runner, self.timeout, version_before)
+        if not res.detail:
+            res.detail = f"shared repo: {self.repo_path}"
+        self._result = res
+        return res
 
 
-def update_claude_code(runner: Runner, which: WhichFn, check_only: bool) -> HarnessResult:
+def update_claude_code(runner: Runner, which: WhichFn, cwd: str, check_only: bool, timeout: int) -> HarnessResult:
     if not which("claude"):
         return HarnessResult("claude-code", "not-installed", detail="claude CLI not found")
-
-    listed = runner(["claude", "plugin", "list", "--json"])
+    listed = runner(["claude", "plugin", "list", "--json"], cwd, timeout)
     if listed.returncode != 0:
-        return HarnessResult("claude-code", "error", detail=_extract_error(listed))
-
+        return HarnessResult("claude-code", "error", detail=_err(listed))
     try:
-        entry = _parse_claude_plugins(listed.stdout)
+        entry = _parse_claude_plugin(listed.stdout)
     except json.JSONDecodeError as exc:
-        return HarnessResult("claude-code", "error", detail=f"invalid JSON from claude plugin list: {exc}")
-
+        return HarnessResult("claude-code", "error", detail=f"invalid JSON: {exc}")
     if entry is None:
         return HarnessResult("claude-code", "not-installed", detail=f"{PLUGIN_ID} not installed")
 
-    version_before = entry.get("version")
-    version_before = str(version_before).strip() if version_before else None
-    if not version_before and entry.get("installPath"):
-        version_before = read_manifest_version(Path(entry["installPath"]))
-
-    if check_only:
-        return HarnessResult(
-            "claude-code",
-            "installed",
-            version_before=version_before,
-            version_after=version_before,
-        )
-
-    mkt = runner(["claude", "plugin", "marketplace", "update", MARKETPLACE_NAME])
-    if mkt.returncode != 0:
-        return HarnessResult("claude-code", "error", version_before=version_before, detail=_extract_error(mkt))
-
-    upd = runner(["claude", "plugin", "update", PLUGIN_ID, "--scope", "user"])
-    if upd.returncode != 0:
-        return HarnessResult("claude-code", "error", version_before=version_before, detail=_extract_error(upd))
-
-    relisted = runner(["claude", "plugin", "list", "--json"])
-    if relisted.returncode != 0:
-        return HarnessResult("claude-code", "error", version_before=version_before, detail=_extract_error(relisted))
-
-    try:
-        after_entry = _parse_claude_plugins(relisted.stdout)
-    except json.JSONDecodeError as exc:
-        return HarnessResult(
-            "claude-code",
-            "error",
-            version_before=version_before,
-            detail=f"invalid JSON after update: {exc}",
-        )
-
-    version_after = None
-    if after_entry is not None:
-        raw_after = after_entry.get("version")
-        version_after = str(raw_after).strip() if raw_after else None
-        if not version_after and after_entry.get("installPath"):
-            version_after = read_manifest_version(Path(after_entry["installPath"]))
-
-    status = "updated" if (version_before != version_after and version_after is not None) else "up-to-date"
-    return HarnessResult(
-        "claude-code",
-        status,
-        version_before=version_before,
-        version_after=version_after or version_before,
+    ver_before = str(entry.get("version") or "").strip() or (
+        read_manifest_version(Path(entry["installPath"])) if entry.get("installPath") else None
     )
+    if check_only:
+        return HarnessResult("claude-code", "installed", ver_before, ver_before)
+
+    for cmd in (
+        ["claude", "plugin", "marketplace", "update", MARKETPLACE_NAME],
+        ["claude", "plugin", "update", PLUGIN_ID, "--scope", "user"],
+    ):
+        res = runner(cmd, cwd, timeout)
+        if res.returncode != 0:
+            return HarnessResult("claude-code", "error", ver_before, detail=_err(res))
+
+    relisted = runner(["claude", "plugin", "list", "--json"], cwd, timeout)
+    if relisted.returncode != 0:
+        return HarnessResult("claude-code", "error", ver_before, detail=_err(relisted))
+    try:
+        after = _parse_claude_plugin(relisted.stdout)
+    except json.JSONDecodeError as exc:
+        return HarnessResult("claude-code", "error", ver_before, detail=f"invalid JSON after update: {exc}")
+    ver_after = None
+    if after is not None:
+        ver_after = str(after.get("version") or "").strip() or (
+            read_manifest_version(Path(after["installPath"])) if after.get("installPath") else None
+        )
+    if not ver_before or not ver_after:
+        return HarnessResult(
+            "claude-code", "error", ver_before, ver_after, detail="could not verify version before/after update"
+        )
+    status = "updated" if ver_before != ver_after else "up-to-date"
+    return HarnessResult("claude-code", status, ver_before, ver_after)
 
 
-def update_codex(runner: Runner, which: WhichFn, check_only: bool) -> HarnessResult:
+def update_codex(
+    runner: Runner, which: WhichFn, codex_home: Path, cwd: str, check_only: bool, timeout: int
+) -> HarnessResult:
     if not which("codex"):
         return HarnessResult("codex", "not-installed", detail="codex CLI not found")
+    manifest = _find_codex_manifest(codex_home)
+    if manifest is None:
+        return HarnessResult("codex", "not-installed", detail=f"no local {PLUGIN_ID} manifest in {codex_home}")
 
-    listed = runner(["codex", "plugin", "list"])
-    if listed.returncode != 0:
-        return HarnessResult("codex", "error", detail=_extract_error(listed))
-
-    installed, version_before = _parse_codex_plugin_list(listed.stdout)
-    if not installed:
-        return HarnessResult("codex", "not-installed", detail=f"{PLUGIN_ID} not installed")
-
+    ver_before = read_manifest_version(manifest.parent.parent, (".codex-plugin/plugin.json",))
     if check_only:
-        return HarnessResult(
-            "codex",
-            "installed",
-            version_before=version_before,
-            version_after=version_before,
-        )
+        return HarnessResult("codex", "installed", ver_before, ver_before)
 
-    upd = runner(["codex", "plugin", "marketplace", "upgrade", MARKETPLACE_NAME])
+    upd = runner(["codex", "plugin", "marketplace", "upgrade", MARKETPLACE_NAME], cwd, timeout)
     if upd.returncode != 0:
-        return HarnessResult("codex", "error", version_before=version_before, detail=_extract_error(upd))
+        return HarnessResult("codex", "error", ver_before, detail=_err(upd))
 
-    relisted = runner(["codex", "plugin", "list"])
-    if relisted.returncode != 0:
-        return HarnessResult("codex", "error", version_before=version_before, detail=_extract_error(relisted))
-
-    _, version_after = _parse_codex_plugin_list(relisted.stdout)
-    if version_before is not None and version_after is not None:
-        status = "updated" if version_before != version_after else "up-to-date"
-    else:
-        combined = f"{upd.stdout}\n{upd.stderr}".lower()
-        status = "up-to-date" if "up to date" in combined or "already" in combined else "updated"
-
-    return HarnessResult(
-        "codex",
-        status,
-        version_before=version_before,
-        version_after=version_after or version_before,
-    )
+    after_manifest = _find_codex_manifest(codex_home) or manifest
+    ver_after = read_manifest_version(after_manifest.parent.parent, (".codex-plugin/plugin.json",))
+    if not ver_before or not ver_after:
+        return HarnessResult(
+            "codex", "error", ver_before, ver_after, detail="could not verify version before/after update"
+        )
+    status = "updated" if ver_before != ver_after else "up-to-date"
+    return HarnessResult("codex", status, ver_before, ver_after)
 
 
-def _find_symlink_target_in_dirs(dirs: Sequence[Path], shared_repo: Path) -> Optional[Path]:
-    """Return shared_repo if any symlink in dirs points into shared_repo, else first agentic target."""
+def _find_symlink_target(dirs: Sequence[Path], shared_repo: Path) -> Optional[Path]:
     fallback: Optional[Path] = None
     for directory in dirs:
         if not directory.is_dir():
             continue
-        try:
-            entries = sorted(directory.iterdir())
-        except OSError:
-            continue
-        for entry in entries:
+        for entry in sorted(directory.iterdir()):
             if not entry.is_symlink():
                 continue
             try:
@@ -380,140 +299,35 @@ def _find_symlink_target_in_dirs(dirs: Sequence[Path], shared_repo: Path) -> Opt
     return fallback
 
 
-def update_opencode(home: Path, shared: SharedRepoManager) -> HarnessResult:
-    opencode_dir = home / ".config" / "opencode"
-    target = _find_symlink_target_in_dirs(
-        (opencode_dir / "skills", opencode_dir / "agents", opencode_dir / "plugins"),
-        shared.repo_path,
-    )
+def _update_symlink_harness(name: str, dirs: Sequence[Path], shared: SharedRepoManager) -> HarnessResult:
+    target = _find_symlink_target(dirs, shared.repo_path)
     if target is None:
-        return HarnessResult("opencode", "not-installed", detail="no agentic symlinks in ~/.config/opencode")
-
+        return HarnessResult(name, "not-installed", detail="no agentic symlinks found")
     if target == shared.repo_path:
-        res = shared.ensure_processed()
-        return HarnessResult(
-            harness="opencode",
-            status=res.status,
-            version_before=res.version_before,
-            version_after=res.version_after,
-            detail=res.detail,
-        )
-
-    return HarnessResult(
-        "opencode",
-        "installed" if shared.check_only else "up-to-date",
-        detail=f"custom symlink target: {target}",
-    )
+        res = shared.process()
+        return HarnessResult(name, res.status, res.version_before, res.version_after, res.detail)
+    status = "installed" if shared.check_only else "skipped"
+    return HarnessResult(name, status, detail=f"custom symlink target: {target}")
 
 
-def update_hermes(home: Path, env: dict[str, str], shared: SharedRepoManager) -> HarnessResult:
-    hermes_home = Path(env.get("HERMES_HOME") or (home / ".hermes")).expanduser()
-    target = _find_symlink_target_in_dirs((hermes_home / "skills",), shared.repo_path)
-    if target is None:
-        return HarnessResult("hermes", "not-installed", detail=f"no agentic symlinks in {hermes_home / 'skills'}")
-
-    if target == shared.repo_path:
-        res = shared.ensure_processed()
-        return HarnessResult(
-            harness="hermes",
-            status=res.status,
-            version_before=res.version_before,
-            version_after=res.version_after,
-            detail=res.detail,
-        )
-
-    return HarnessResult(
-        "hermes",
-        "installed" if shared.check_only else "up-to-date",
-        detail=f"custom symlink target: {target}",
-    )
-
-
-def update_antigravity(
-    home: Path,
-    runner: Runner,
-    shared: SharedRepoManager,
-    check_only: bool,
-) -> HarnessResult:
+def update_antigravity(home: Path, runner: Runner, shared: SharedRepoManager, check_only: bool, timeout: int) -> HarnessResult:
     plugin_dir = home / ".gemini" / "config" / "plugins" / "agentic"
-    manifest = plugin_dir / ".antigravity-plugin" / "plugin.json"
-    if not manifest.is_file():
+    if not (plugin_dir / ".antigravity-plugin" / "plugin.json").is_file():
         return HarnessResult("antigravity", "not-installed", detail="plugin manifest not found")
-
     if shared.repo_path.exists() and _is_within(plugin_dir, shared.repo_path):
-        res = shared.ensure_processed()
-        return HarnessResult(
-            harness="antigravity",
-            status=res.status,
-            version_before=res.version_before,
-            version_after=res.version_after,
-            detail=res.detail,
-        )
+        res = shared.process()
+        return HarnessResult("antigravity", res.status, res.version_before, res.version_after, res.detail)
 
-    version_before = read_manifest_version(plugin_dir)
+    ver_before = read_manifest_version(plugin_dir)
     if check_only:
-        return HarnessResult(
-            "antigravity",
-            "installed",
-            version_before=version_before,
-            version_after=version_before,
-        )
-
+        return HarnessResult("antigravity", "installed", ver_before, ver_before)
     if not (plugin_dir / ".git").exists():
         return HarnessResult(
-            "antigravity",
-            "up-to-date",
-            version_before=version_before,
-            version_after=version_before,
+            "antigravity", "skipped", ver_before, ver_before,
             detail="standalone install (not a git checkout); skipped auto-reinstall",
         )
-
-    branch_res = runner(["git", "-C", str(plugin_dir), "rev-parse", "--abbrev-ref", "HEAD"])
-    if branch_res.returncode != 0:
-        return HarnessResult(
-            "antigravity",
-            "error",
-            version_before=version_before,
-            detail=_extract_error(branch_res),
-        )
-
-    branch = branch_res.stdout.strip()
-    if branch != SHARED_BRANCH:
-        return HarnessResult(
-            "antigravity",
-            "up-to-date",
-            version_before=version_before,
-            version_after=version_before,
-            detail=f"on branch '{branch}' (expected '{SHARED_BRANCH}'); skipped pull",
-        )
-
-    head_before = runner(["git", "-C", str(plugin_dir), "rev-parse", "HEAD"])
-    sha_before = head_before.stdout.strip() if head_before.returncode == 0 else None
-
-    pull = runner(["git", "-C", str(plugin_dir), "pull", "--ff-only", "origin", SHARED_BRANCH])
-    if pull.returncode != 0:
-        return HarnessResult(
-            "antigravity",
-            "error",
-            version_before=version_before,
-            detail=_extract_error(pull),
-        )
-
-    head_after = runner(["git", "-C", str(plugin_dir), "rev-parse", "HEAD"])
-    sha_after = head_after.stdout.strip() if head_after.returncode == 0 else None
-    version_after = read_manifest_version(plugin_dir)
-
-    changed = (
-        (version_before is not None and version_after is not None and version_before != version_after)
-        or (sha_before is not None and sha_after is not None and sha_before != sha_after)
-    )
-    status = "updated" if changed else "up-to-date"
-    return HarnessResult(
-        "antigravity",
-        status,
-        version_before=version_before,
-        version_after=version_after or version_before,
-    )
+    res = _git_pull_verified(plugin_dir, runner, timeout, ver_before)
+    return HarnessResult("antigravity", res.status, res.version_before, res.version_after, res.detail)
 
 
 def run_all(
@@ -522,31 +336,28 @@ def run_all(
     env: Optional[dict[str, str]] = None,
     runner: Runner = default_runner,
     which: WhichFn = shutil.which,
+    timeout: int = COMMAND_TIMEOUT,
 ) -> list[HarnessResult]:
-    effective_env = dict(os.environ if env is None else env)
-    effective_home = Path(home if home is not None else Path.home()).expanduser()
+    eff_env = dict(os.environ if env is None else env)
+    eff_home = Path(home if home is not None else Path.home()).expanduser()
+    cwd = _safe_cwd(eff_home)
     shared_repo = Path(
-        effective_env.get("AGENTIC_SHARED_REPO")
-        or (effective_home / ".local" / "share" / "agentic-harness-plugin")
+        eff_env.get("AGENTIC_SHARED_REPO") or (eff_home / ".local" / "share" / "agentic-harness-plugin")
     ).expanduser()
+    codex_home = Path(eff_env.get("CODEX_HOME") or (eff_home / ".codex")).expanduser()
+    hermes_home = Path(eff_env.get("HERMES_HOME") or (eff_home / ".hermes")).expanduser()
+    opencode_dir = eff_home / ".config" / "opencode"
 
-    shared = SharedRepoManager(shared_repo, runner=runner, check_only=check_only)
-    tasks: list[tuple[str, Callable[[], HarnessResult]]] = [
-        ("claude-code", lambda: update_claude_code(runner=runner, which=which, check_only=check_only)),
-        ("codex", lambda: update_codex(runner=runner, which=which, check_only=check_only)),
-        ("opencode", lambda: update_opencode(home=effective_home, shared=shared)),
-        ("hermes", lambda: update_hermes(home=effective_home, env=effective_env, shared=shared)),
-        (
-            "antigravity",
-            lambda: update_antigravity(
-                home=effective_home,
-                runner=runner,
-                shared=shared,
-                check_only=check_only,
-            ),
-        ),
-    ]
-
+    shared = SharedRepoManager(shared_repo, runner=runner, check_only=check_only, timeout=timeout)
+    tasks = (
+        ("claude-code", lambda: update_claude_code(runner, which, cwd, check_only, timeout)),
+        ("codex", lambda: update_codex(runner, which, codex_home, cwd, check_only, timeout)),
+        ("opencode", lambda: _update_symlink_harness(
+            "opencode", (opencode_dir / "skills", opencode_dir / "agents", opencode_dir / "plugins"), shared
+        )),
+        ("hermes", lambda: _update_symlink_harness("hermes", (hermes_home / "skills",), shared)),
+        ("antigravity", lambda: update_antigravity(eff_home, runner, shared, check_only, timeout)),
+    )
     results: list[HarnessResult] = []
     for name, fn in tasks:
         try:
@@ -568,9 +379,8 @@ def format_report(results: Sequence[HarnessResult], check_only: bool) -> str:
     mode = "check (read-only)" if check_only else "update"
     lines = [f"Agentic Harness {mode} summary:"]
     for res in results:
-        ver = format_version(res)
         suffix = f" ({res.detail})" if res.detail else ""
-        lines.append(f"  {res.harness:<12} {res.status:<14} {ver}{suffix}")
+        lines.append(f"  {res.harness:<12} {res.status:<14} {format_version(res)}{suffix}")
     return "\n".join(lines)
 
 

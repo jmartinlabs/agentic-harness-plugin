@@ -4,18 +4,22 @@ from __future__ import annotations
 
 import json
 import runpy
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "update-agentic"
 MOD = runpy.run_path(str(SCRIPT))
 
 CommandResult = MOD["CommandResult"]
+default_runner = MOD["default_runner"]
 run_all = MOD["run_all"]
 format_report = MOD["format_report"]
-main = MOD["main"]
+
+VALID_ORIGIN = "https://github.com/jmartinlabs/agentic-harness-plugin.git"
 
 
 def _write_manifest(root: Path, version: str, rel: str = ".claude-plugin/plugin.json") -> None:
@@ -31,46 +35,48 @@ def _setup_shared_harnesses(home: Path, shared_repo: Path, version: str = "1.2.0
     skill_dir = shared_repo / "skills" / "verify-project"
     skill_dir.mkdir(parents=True, exist_ok=True)
 
-    # OpenCode symlink into shared repo
     oc_skills = home / ".config" / "opencode" / "skills"
     oc_skills.mkdir(parents=True, exist_ok=True)
     (oc_skills / "verify-project").symlink_to(skill_dir)
 
-    # Hermes symlink into shared repo
     hermes_skills = home / ".hermes" / "skills"
     hermes_skills.mkdir(parents=True, exist_ok=True)
     (hermes_skills / "verify-project").symlink_to(skill_dir)
 
-    # Antigravity symlink into shared repo
     ag_parent = home / ".gemini" / "config" / "plugins"
     ag_parent.mkdir(parents=True, exist_ok=True)
     (ag_parent / "agentic").symlink_to(shared_repo)
 
 
+def _setup_codex_manifest(codex_home: Path, version: str = "1.2.0") -> Path:
+    plugin_root = codex_home / "marketplaces" / "agentic-harness" / "agentic"
+    _write_manifest(plugin_root, version, ".codex-plugin/plugin.json")
+    return plugin_root
+
+
 class UpdateAgenticTests(unittest.TestCase):
-    def test_check_mode_is_strictly_read_only(self):
+    def test_check_mode_is_strictly_read_only_and_never_calls_codex_plugin_list(self):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp) / "home"
             shared_repo = home / ".local" / "share" / "agentic-harness-plugin"
+            codex_home = home / ".codex"
             _setup_shared_harnesses(home, shared_repo, version="1.2.1")
+            _setup_codex_manifest(codex_home, version="1.2.1")
 
-            commands: list[list[str]] = []
+            commands: list[tuple[list[str], str | None]] = []
 
-            def fake_runner(cmd):
-                commands.append(list(cmd))
+            def fake_runner(cmd, cwd, timeout):
+                commands.append((list(cmd), cwd))
                 if cmd[:3] == ["claude", "plugin", "list"]:
                     return CommandResult(
-                        0,
-                        json.dumps([{"id": "agentic@agentic-harness", "version": "1.2.1"}]),
+                        0, json.dumps([{"id": "agentic@agentic-harness", "version": "1.2.1"}])
                     )
-                if cmd[:3] == ["codex", "plugin", "list"]:
-                    return CommandResult(0, "agentic@agentic-harness  1.2.1\n")
-                raise AssertionError(f"Unexpected mutating or unknown command in --check: {cmd}")
+                raise AssertionError(f"Unexpected command in --check: {cmd}")
 
             results = run_all(
                 check_only=True,
                 home=home,
-                env={"AGENTIC_SHARED_REPO": str(shared_repo)},
+                env={"AGENTIC_SHARED_REPO": str(shared_repo), "CODEX_HOME": str(codex_home)},
                 runner=fake_runner,
                 which=lambda name: f"/usr/bin/{name}",
             )
@@ -80,12 +86,10 @@ class UpdateAgenticTests(unittest.TestCase):
                 self.assertEqual(by_name[name].status, "installed", name)
                 self.assertEqual(by_name[name].version_before, "1.2.1", name)
 
-            # Verify no mutating commands were invoked
-            for cmd in commands:
-                self.assertNotIn("update", cmd)
-                self.assertNotIn("upgrade", cmd)
-                self.assertNotIn("pull", cmd)
-                self.assertNotIn("install", cmd)
+            # Confirm codex plugin list was never called and claude ran from home (outside any project)
+            self.assertEqual(len(commands), 1)
+            self.assertEqual(commands[0][0], ["claude", "plugin", "list", "--json"])
+            self.assertEqual(commands[0][1], str(home))
 
     def test_missing_harnesses_reported_not_installed_and_never_installed(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -93,7 +97,7 @@ class UpdateAgenticTests(unittest.TestCase):
             home.mkdir()
             commands: list[list[str]] = []
 
-            def fake_runner(cmd):
+            def fake_runner(cmd, cwd, timeout):
                 commands.append(list(cmd))
                 return CommandResult(1, "", "should not be called")
 
@@ -109,7 +113,7 @@ class UpdateAgenticTests(unittest.TestCase):
             for res in results:
                 self.assertEqual(res.status, "not-installed", res.harness)
 
-    def test_shared_git_repo_updated_only_once_across_multiple_harnesses(self):
+    def test_shared_git_repo_updated_only_once_after_verifying_branch_and_origin(self):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp) / "home"
             shared_repo = home / ".local" / "share" / "agentic-harness-plugin"
@@ -118,11 +122,15 @@ class UpdateAgenticTests(unittest.TestCase):
             pull_calls = 0
             sha_state = {"sha": "aaaa111"}
 
-            def fake_runner(cmd):
+            def fake_runner(cmd, cwd, timeout):
                 nonlocal pull_calls
-                if cmd[:2] == ["git", "-C"] and cmd[3:5] == ["rev-parse", "HEAD"]:
+                if cmd[3:6] == ["rev-parse", "--abbrev-ref", "HEAD"]:
+                    return CommandResult(0, "stable\n")
+                if cmd[3:6] == ["remote", "get-url", "origin"]:
+                    return CommandResult(0, "git@github.com:jmartinlabs/agentic-harness-plugin.git\n")
+                if cmd[3:5] == ["rev-parse", "HEAD"]:
                     return CommandResult(0, sha_state["sha"] + "\n")
-                if cmd[:2] == ["git", "-C"] and cmd[3:7] == ["pull", "--ff-only", "origin", "stable"]:
+                if cmd[3:7] == ["pull", "--ff-only", "origin", "stable"]:
                     pull_calls += 1
                     sha_state["sha"] = "bbbb222"
                     _write_manifest(shared_repo, "1.2.1", ".claude-plugin/plugin.json")
@@ -144,13 +152,46 @@ class UpdateAgenticTests(unittest.TestCase):
                 self.assertEqual(by_name[name].status, "updated", name)
                 self.assertEqual(by_name[name].version_before, "1.2.0", name)
                 self.assertEqual(by_name[name].version_after, "1.2.1", name)
-            self.assertEqual(by_name["claude-code"].status, "not-installed")
-            self.assertEqual(by_name["codex"].status, "not-installed")
 
-    def test_distinguishes_updated_up_to_date_not_installed_and_error_with_fault_isolation(self):
+    def test_shared_repo_wrong_branch_and_wrong_origin_rejected_without_pull(self):
+        for case, branch_out, origin_out, expected_err in (
+            ("wrong-branch", "main\n", VALID_ORIGIN + "\n", "expected branch 'stable'"),
+            ("wrong-origin", "stable\n", "https://github.com/other/fork.git\n", "unexpected origin URL"),
+        ):
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as tmp:
+                home = Path(tmp) / "home"
+                shared_repo = home / ".local" / "share" / "agentic-harness-plugin"
+                _setup_shared_harnesses(home, shared_repo, version="1.2.0")
+
+                def fake_runner(cmd, cwd, timeout):
+                    if cmd[3:6] == ["rev-parse", "--abbrev-ref", "HEAD"]:
+                        return CommandResult(0, branch_out)
+                    if cmd[3:6] == ["remote", "get-url", "origin"]:
+                        return CommandResult(0, origin_out)
+                    if "pull" in cmd:
+                        raise AssertionError("git pull must not run when branch or origin is invalid")
+                    raise AssertionError(f"Unexpected command: {cmd}")
+
+                results = run_all(
+                    check_only=False,
+                    home=home,
+                    env={"AGENTIC_SHARED_REPO": str(shared_repo)},
+                    runner=fake_runner,
+                    which=lambda _name: None,
+                )
+                by_name = {r.harness: r for r in results}
+                for name in ("opencode", "hermes", "antigravity"):
+                    self.assertEqual(by_name[name].status, "error", name)
+                    self.assertIn(expected_err, by_name[name].detail, name)
+
+    def test_statuses_skipped_unverified_error_timeout_and_cwd_outside_project(self):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp) / "home"
             shared_repo = home / ".local" / "share" / "agentic-harness-plugin"
+            codex_home = home / ".codex"
+            codex_root = _setup_codex_manifest(codex_home, version="1.2.0")
+
+            # OpenCode uses shared repo (up-to-date)
             (shared_repo / ".git").mkdir(parents=True, exist_ok=True)
             _write_manifest(shared_repo, "1.2.1", ".claude-plugin/plugin.json")
             skill_dir = shared_repo / "skills" / "verify-project"
@@ -159,60 +200,121 @@ class UpdateAgenticTests(unittest.TestCase):
             oc_skills.mkdir(parents=True, exist_ok=True)
             (oc_skills / "verify-project").symlink_to(skill_dir)
 
-            # Standalone non-git Antigravity install
+            # Standalone non-git Antigravity install -> skipped
             ag_dir = home / ".gemini" / "config" / "plugins" / "agentic"
             _write_manifest(ag_dir, "1.2.1", ".antigravity-plugin/plugin.json")
 
-            codex_list_calls = 0
+            cwds: dict[str, list[str | None]] = {"claude": [], "codex": []}
 
-            def fake_runner(cmd):
-                nonlocal codex_list_calls
-                # Claude Code fails during marketplace update
-                if cmd[:3] == ["claude", "plugin", "list"]:
-                    return CommandResult(0, json.dumps([{"id": "agentic@agentic-harness", "version": "1.2.0"}]))
-                if cmd[:4] == ["claude", "plugin", "marketplace", "update"]:
-                    return CommandResult(1, "", "network timeout")
-
-                # Codex updates from 1.2.0 -> 1.2.1
-                if cmd[:3] == ["codex", "plugin", "list"]:
-                    codex_list_calls += 1
-                    ver = "1.2.0" if codex_list_calls == 1 else "1.2.1"
-                    return CommandResult(0, f"agentic@agentic-harness  {ver}\n")
-                if cmd[:4] == ["codex", "plugin", "marketplace", "upgrade"]:
-                    return CommandResult(0, "upgraded agentic-harness\n")
-
-                # Shared repo (OpenCode) is already up-to-date
-                if cmd[:2] == ["git", "-C"] and cmd[3:5] == ["rev-parse", "HEAD"]:
-                    return CommandResult(0, "cccc333\n")
-                if cmd[:2] == ["git", "-C"] and cmd[3:7] == ["pull", "--ff-only", "origin", "stable"]:
-                    return CommandResult(0, "Already up to date.\n")
-
+            def fake_runner(cmd, cwd, timeout):
+                if cmd[0] == "claude":
+                    cwds["claude"].append(cwd)
+                    if cmd[:3] == ["claude", "plugin", "list"]:
+                        return CommandResult(0, json.dumps([{"id": "agentic@agentic-harness", "version": "1.2.0"}]))
+                    if cmd[:4] == ["claude", "plugin", "marketplace", "update"]:
+                        return CommandResult(124, "", f"command timed out after {timeout}s")
+                if cmd[0] == "codex":
+                    cwds["codex"].append(cwd)
+                    self.assertNotEqual(cmd[:3], ["codex", "plugin", "list"])
+                    if cmd[:4] == ["codex", "plugin", "marketplace", "upgrade"]:
+                        _write_manifest(codex_root, "1.2.1", ".codex-plugin/plugin.json")
+                        return CommandResult(0, "upgraded\n")
+                if cmd[0] == "git":
+                    if cmd[3:6] == ["rev-parse", "--abbrev-ref", "HEAD"]:
+                        return CommandResult(0, "stable\n")
+                    if cmd[3:6] == ["remote", "get-url", "origin"]:
+                        return CommandResult(0, VALID_ORIGIN + "\n")
+                    if cmd[3:5] == ["rev-parse", "HEAD"]:
+                        return CommandResult(0, "cccc333\n")
+                    if cmd[3:7] == ["pull", "--ff-only", "origin", "stable"]:
+                        return CommandResult(0, "Already up to date.\n")
                 raise AssertionError(f"Unexpected command: {cmd}")
 
             results = run_all(
                 check_only=False,
                 home=home,
-                env={"AGENTIC_SHARED_REPO": str(shared_repo)},
+                env={"AGENTIC_SHARED_REPO": str(shared_repo), "CODEX_HOME": str(codex_home)},
                 runner=fake_runner,
                 which=lambda name: f"/usr/bin/{name}",
+                timeout=15,
             )
 
             by_name = {r.harness: r for r in results}
             self.assertEqual(by_name["claude-code"].status, "error")
-            self.assertIn("network timeout", by_name["claude-code"].detail)
+            self.assertIn("timed out after 15s", by_name["claude-code"].detail)
             self.assertEqual(by_name["codex"].status, "updated")
             self.assertEqual(by_name["codex"].version_before, "1.2.0")
             self.assertEqual(by_name["codex"].version_after, "1.2.1")
             self.assertEqual(by_name["opencode"].status, "up-to-date")
             self.assertEqual(by_name["hermes"].status, "not-installed")
-            self.assertEqual(by_name["antigravity"].status, "up-to-date")
+            self.assertEqual(by_name["antigravity"].status, "skipped")
             self.assertIn("skipped auto-reinstall", by_name["antigravity"].detail)
+
+            self.assertTrue(cwds["claude"])
+            self.assertTrue(cwds["codex"])
+            self.assertTrue(all(c == str(home) for c in cwds["claude"]))
+            self.assertTrue(all(c == str(home) for c in cwds["codex"]))
 
             report = format_report(results, check_only=False)
             self.assertIn("1.2.0 -> 1.2.1", report)
-            self.assertIn("error", report)
-            self.assertIn("not-installed", report)
-            self.assertIn("up-to-date", report)
+            self.assertIn("skipped", report)
+
+    def test_unverified_version_after_update_reports_error_not_success(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            codex_home = home / ".codex"
+            codex_root = _setup_codex_manifest(codex_home, version="1.2.0")
+
+            def fake_runner(cmd, cwd, timeout):
+                if cmd[:4] == ["codex", "plugin", "marketplace", "upgrade"]:
+                    # Corrupt manifest so post-upgrade version cannot be verified
+                    (codex_root / ".codex-plugin" / "plugin.json").write_text("{}", encoding="utf-8")
+                    return CommandResult(0, "ok\n")
+                raise AssertionError(f"Unexpected command: {cmd}")
+
+            results = run_all(
+                check_only=False,
+                home=home,
+                env={"CODEX_HOME": str(codex_home)},
+                runner=fake_runner,
+                which=lambda name: "/usr/bin/codex" if name == "codex" else None,
+            )
+            by_name = {r.harness: r for r in results}
+            self.assertEqual(by_name["codex"].status, "error")
+            self.assertIn("could not verify version", by_name["codex"].detail)
+
+    def test_unknown_before_version_with_valid_after_version_reports_error_not_updated(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            codex_home = home / ".codex"
+            codex_root = codex_home / "marketplaces" / "agentic-harness" / "agentic"
+            manifest = codex_root / ".codex-plugin" / "plugin.json"
+            manifest.parent.mkdir(parents=True, exist_ok=True)
+            manifest.write_text(json.dumps({"name": "agentic"}), encoding="utf-8")
+
+            def fake_runner(cmd, cwd, timeout):
+                if cmd[:4] == ["codex", "plugin", "marketplace", "upgrade"]:
+                    _write_manifest(codex_root, "1.2.1", ".codex-plugin/plugin.json")
+                    return CommandResult(0, "ok\n")
+                raise AssertionError(f"Unexpected command: {cmd}")
+
+            results = run_all(
+                check_only=False,
+                home=home,
+                env={"CODEX_HOME": str(codex_home)},
+                runner=fake_runner,
+                which=lambda name: "/usr/bin/codex" if name == "codex" else None,
+            )
+            by_name = {r.harness: r for r in results}
+            self.assertEqual(by_name["codex"].status, "error")
+            self.assertIn("before/after", by_name["codex"].detail)
+
+    def test_default_runner_handles_timeout_expired(self):
+        with mock.patch("subprocess.run", side_effect=subprocess.TimeoutExpired(["claude"], 5)) as mock_run:
+            res = default_runner(["claude"], cwd="/tmp", timeout=5)
+        self.assertEqual(mock_run.call_args.kwargs["timeout"], 5)
+        self.assertEqual(res.returncode, 124)
+        self.assertIn("timed out after 5s", res.stderr)
 
 
 if __name__ == "__main__":
