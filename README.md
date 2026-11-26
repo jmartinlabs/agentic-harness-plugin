@@ -20,6 +20,14 @@ codex plugin marketplace add https://github.com/jmartinlabs/agentic-harness-plug
 codex plugin add agentic@agentic-harness
 ```
 
+### Antigravity
+
+```sh
+antigravity plugin install https://github.com/jmartinlabs/agentic-harness-plugin/tree/stable
+```
+
+Antigravity installs globally per user under `$HOME/.gemini/config/plugins/agentic` from a Git branch (not a commit SHA). It loads `.antigravity-plugin/plugin.json` and the 13 skills as bare names (e.g. `verify-project`, `orchestrate`); it skips `agents/*.md` and `hooks/hooks.json`.
+
 Review and trust the plugin's SessionStart hook in Codex using `/hooks`. After an update or rollback, review it again if Codex marks the installed hook as changed. The SessionStart hook is configured to display `Agentic Harness X.Y.Z` from the installed artifact. Verify the message when you open a new session. If it is absent, check the client hook settings and report the loaded artifact version with the readiness diagnostic. Hook trust and project trust remain client decisions. [Codex plugin hooks](https://developers.openai.com/plugins/build/plugins), [Claude Code hooks](https://code.claude.com/docs/en/hooks)
 
 In a new project from **Use this template**, run the `agentic:verify-project` skill, then `agentic:init-project`. For an existing project, use `agentic:adopt-project`, which can run the read-only inventory before the entry files exist. The readiness skill reports `artifact_version`, the active project and its applicable policy paths. Stop if the active project's rules or the common policy are unavailable. If Claude Code denies plugin reads, find the artifact's `installPath` with `claude plugin list --json`. Run `python3 "<installPath>/scripts/verify-project.py" --print-rules` from your terminal. It prints the exact `Read(//<installPath>/**)` rule and separate tool rules without writing settings. Approve the permissions you need when prompted. To keep an approval for one project, add only its approved entries to `permissions.allow` in that project's untracked `.claude/settings.local.json`. Refresh the exact Read rule after an update if needed.
@@ -37,6 +45,11 @@ claude plugin update agentic@agentic-harness --scope user
 codex plugin marketplace upgrade agentic-harness
 ```
 
+```sh
+antigravity plugin uninstall agentic
+antigravity plugin install https://github.com/jmartinlabs/agentic-harness-plugin/tree/stable
+```
+
 ### Roll back
 
 Outside any project, uninstall the user plugin and remove the marketplace, then re-add the same marketplace and reinstall. In the install commands above replace `stable` with the previous published tag, such as `v1.0.0`. Use the same procedure with `stable` to return to the stable channel. The older artifact may predate the startup banner.
@@ -49,6 +62,10 @@ claude plugin marketplace remove agentic-harness
 ```sh
 codex plugin remove agentic@agentic-harness
 codex plugin marketplace remove agentic-harness
+```
+
+```sh
+antigravity plugin uninstall agentic
 ```
 
 The native CLI flows were exercised in fresh temporary profiles on Claude Code 2.1.330 and Codex CLI 0.172.0 against a synthetic Git source. Both installed 1.1.0, upgraded to 1.1.1 and returned to 1.1.0 through the same marketplace identity. That probe used a synthetic branch for the old ref, with no model calls. Claude's native SessionStart trace also reported the expected version in both synthetic projects at each step, before authentication. Codex discovered the native hook and required trust before executing it. Authenticated session and published-tag checks remain separate.

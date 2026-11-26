@@ -5,7 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-COORDINATORS = ("claude", "codex", "opencode", "hermes")
+COORDINATORS = ("claude", "codex", "opencode", "hermes", "antigravity")
 ARTIFACT = Path(__file__).resolve().parent.parent
 # Packaged native manifests agree on the artifact version (checked by validate-core).
 MANIFEST = ".claude-plugin/plugin.json"

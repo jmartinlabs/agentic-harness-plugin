@@ -173,7 +173,7 @@ class PilotBoundaryTests(unittest.TestCase):
         self.assertEqual(result.stdout, "")
 
     def test_other_v2_identities_are_accepted_without_config(self):
-        for coordinator in ("opencode", "hermes"):
+        for coordinator in ("opencode", "hermes", "antigravity"):
             with self.subTest(coordinator=coordinator):
                 result = self.invoke(self.projects / "a", "--coordinator", coordinator)
                 self.assertEqual(result.returncode, 0, result.stderr)
