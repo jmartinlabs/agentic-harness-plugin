@@ -6,7 +6,7 @@ Sub-issue [#34](https://github.com/jmartinlabs/agentic-harness-plugin/issues/34)
 
 | Campo | Valor |
 |---|---|
-| Estado | Consolidada con la revisión externa; **pendiente de revisión conjunta**. No es una decisión arquitectónica aprobada ni autoriza implementar o probar |
+| Estado | Consolidada y revisada por el propietario; **base para las validaciones desde nuevas sesiones de T3**. No aprueba aún cambios en el plugin |
 | Fecha de observación | 2026-11-26 |
 | Versiones | T3 Code 0.1.11 (Beta, macOS) · plugin 1.2.2 (1.2.1 en Claude Code y Antigravity) · Claude Code 2.1.330 · Codex CLI 0.172.0 · OpenCode 2.3.2 · Antigravity no registrada |
 | Coordinador usado | Claude Sonnet 5.5 dentro de T3 |
@@ -49,9 +49,9 @@ Es requisito del propietario no depender de Claude como coordinador (§9); eso t
   consolidación se consultó su formato y quedaron visibles parte de las conclusiones de #20 y los
   encabezados de #21. No se ha incorporado contenido de ninguna.
 - Las evidencias originales se conservan localmente, fuera del repositorio. Este documento omite
-  identificadores de hilos y sesiones, rutas personales, datos de cuenta, porcentajes de cuota y todo
-  registro de otros proyectos. Las cifras agregadas de uso de §4.1 se incluyen por indicación expresa del
-  propietario. Un tercero no puede reproducir las observaciones solo con este documento.
+  identificadores de hilos y sesiones, rutas personales, datos de cuenta, cifras agregadas de consumo
+  personal, porcentajes de cuota y todo registro de otros proyectos. Un tercero no puede reproducir
+  las observaciones solo con este documento.
 
 ## 3. Capacidades verificadas experimentalmente
 
@@ -144,20 +144,15 @@ Según la revisión externa, la interfaz de T3 ofrece de forma centralizada: tok
 sesión y turno; tokens de entrada y salida; lecturas desde caché; coste equivalente de API; evolución
 temporal; y número de sesiones.
 
-| Métrica observada | Valor |
-|---|---|
-| Tokens procesados | 368 millones |
-| Sesiones | 98 |
-| Coste equivalente estimado de API | 101,47 USD |
-| Lecturas desde caché | 94,3 % |
+Interpretación y conclusiones sobre eficiencia, caché y costes:
 
-Interpretación:
-
-- Es una instantánea; **no es necesariamente el consumo de las pruebas** de esta investigación.
+- Las cifras agregadas de consumo de la cuenta personal se omiten del documento público; **no equivalen
+  al consumo exclusivo de las pruebas** de esta investigación (las métricas de las pruebas se conservan
+  en §3.3).
 - El coste equivalente de API no es el coste real de las suscripciones.
 - Un coste ausente para DeepSeek **no significa consumo gratuito**.
-- Hydrogen mostraba un coste equivalente inferior a Neon y Sonnet, con tareas y proporciones de caché
-  distintas. **No es un benchmark comparable.**
+- Las diferencias de coste equivalente observado entre modelos (por ejemplo, Hydrogen frente a Neon y
+  Sonnet en tareas y proporciones de caché distintas) **no constituyen un benchmark comparable**.
 
 ## 5. Capacidades documentadas
 
@@ -323,7 +318,8 @@ subagentes nativos y [CLI externo](../methodology/dynamic-agents-external-client
 
 ### 7.6 Cuotas
 
-Política propuesta por la revisión externa, que la identifica como la actual de Agentic Harness:
+Política procedente de la coordinación previa con Codex, mantenida aquí como propuesta pendiente de
+incorporar al plugin:
 
 | Cuota restante | Comportamiento |
 |---|---|
@@ -337,11 +333,12 @@ Política propuesta por la revisión externa, que la identifica como la actual d
 - Nunca usar automáticamente créditos de reinicio, activar pagos adicionales ni contratar APIs.
 - En el piloto: consultar y registrar lo disponible, sin desarrollar lectores ni adaptadores.
 
-Contraste con el repositorio: **estos umbrales no se localizaron** en las skills, metodología, roles,
-plantillas ni scripts del plugin 1.2.2. [orchestrate](../skills/orchestrate/SKILL.md) exige respetar los
-límites reales, detener lo afectado y no cambiar a una ruta con otro coste sin consentimiento explícito;
-una preautorización expresa sería compatible con esto. Queda por confirmar dónde está definida la
-política (D8).
+Contraste con el repositorio: **estos umbrales no están incorporados todavía** en las skills,
+metodología, roles, plantillas ni scripts del plugin 1.2.2; el propietario confirmó que proceden de la
+política anterior de coordinación con Codex y se mantienen como propuesta pendiente de incorporar (D8).
+[orchestrate](../skills/orchestrate/SKILL.md) exige respetar los límites reales, detener lo afectado y no
+cambiar a una ruta con otro coste sin consentimiento explícito; una preautorización expresa sería
+compatible con esto.
 
 Sustituye la propuesta anterior de umbrales sobre porcentaje usado (85 % y 90 %) sin cambio automático.
 
@@ -427,7 +424,9 @@ Esta sustitución solo vale dentro de T3. Fuera de él, cada cliente conserva su
 
 ## 9. Requisitos y decisiones del propietario
 
-Expresados el 2026-11-26. No aprueban la arquitectura de §7 ni autorizan implementar o probar.
+Expresados el 2026-11-26. El propietario dio su conformidad al documento consolidado como base para
+las validaciones siguientes; no autorizan todavía modificaciones en el plugin ni pruebas desde esta
+sesión.
 
 ### 9.1 Requisitos expresos
 
@@ -444,10 +443,12 @@ Expresados el 2026-11-26. No aprueban la arquitectura de §7 ni autorizan implem
 
 | # | Decisión |
 |---|---|
-| A1 | Los resultados bastan para avanzar hacia un piloto real; no autoriza aún el piloto |
-| A2 | Revisar la propuesta antes de nuevas pruebas o modificaciones; después, piloto con una issue real |
+| A1 | Los resultados bastan para avanzar hacia las validaciones en nuevas sesiones de T3 |
+| A2 | Conformidad del propietario con el documento consolidado; las siguientes pruebas las ejecutará en nuevas sesiones de T3, empezando por Antigravity con Hydrogen como coordinador, incorporando sus resultados a esta misma investigación |
 | A3 | Mantener la entrada de confianza que Codex añadió para este repositorio |
-| A4 | Consolidar la investigación, con la revisión externa, antes de continuar con el piloto |
+| A4 | Mantener abierta la issue #34 y la PR #35 en borrador; no iniciar más pruebas ni implementaciones desde esta sesión |
+| A5 | Omitir las cifras agregadas de consumo personal del documento público, conservando métricas de pruebas y conclusiones |
+| A6 | Mantener los umbrales de cuota del 25 % y 5 % (procedentes de la política previa con Codex) como propuesta pendiente de incorporar al plugin |
 
 ## 10. Decisiones pendientes
 
@@ -460,7 +461,7 @@ Expresados el 2026-11-26. No aprueban la arquitectura de §7 ni autorizan implem
 | D5 | Orden de validación | El de §11 |
 | D6 | Momento de modificar el plugin | Después de validar y pilotar |
 | D7 | Issue del piloto | De bajo riesgo. Candidata: aviso de perfiles Hermes sin skills en `update-agentic --check`; sin autorizar ni crear |
-| D8 | Política de cuotas de §7.6 y su fuente | Mantenerla como propuesta y confirmar su origen |
+| D8 | Política de cuotas de §7.6 (25 % y 5 %) | Mantenerla como propuesta pendiente de incorporar al plugin (origen: política previa con Codex) |
 | D9 | Reglas de proyecto de este repositorio, ausentes para `verify-project` | Registrar la limitación en el piloto |
 | D10 | Alcance de soporte para Hermes y Antigravity | Antigravity por ruta; Hermes después |
 | D11 | Sustituir total o parcialmente el seguimiento propio de uso | Decidir tras comprobar §7.9 |
@@ -470,8 +471,10 @@ Expresados el 2026-11-26. No aprueban la arquitectura de §7 ni autorizan implem
 
 ## 11. Validaciones y pruebas pendientes
 
-Ninguna está autorizada. La mayoría consume cuota. La prueba real debe hacerse desde una sesión abierta
-en el proyecto correspondiente.
+No deben iniciarse desde esta sesión. El propietario las ejecutará desde nuevas sesiones de T3, empezando
+por la validación 1 (Antigravity con Hydrogen como coordinador), e incorporará los resultados a esta
+misma investigación. La prueba real debe hacerse desde una sesión abierta en el proyecto
+correspondiente.
 
 ### 11.1 Prioridad propuesta
 
@@ -521,7 +524,7 @@ hecho pruebas nuevas para verificarla.
 | Configuración de modelos | §7.3, D2 | Añade proveedor y alternativas; el validador se evalúa tras el piloto |
 | Consumo y eficiencia | §4.1, §7.8, D12 | Retira la obligación de un coordinador nuevo por entrega |
 | Seguimiento centralizado | §7.9, D11 | Línea de evaluación nueva |
-| Cuotas | §6, §7.6, D8 | Sustituye umbrales y automatismo; origen de la política por confirmar |
+| Cuotas | §6, §7.6, D8 | Sustituye umbrales y automatismo; origen confirmado en la política previa con Codex, pendiente de incorporar al plugin |
 | Roles y restricciones | §7.10, R5 | Retira mitigaciones que añadían barreras técnicas |
 | Activación y mantenimiento | §7.2 | Añade cautelas sobre hooks, identificación y `AGENTS.md` |
 | Roadmap | §8 | Incluye P1; P2–P6 siguen abiertas |
