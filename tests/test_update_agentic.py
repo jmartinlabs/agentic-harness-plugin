@@ -18,6 +18,7 @@ CommandResult = MOD["CommandResult"]
 default_runner = MOD["default_runner"]
 run_all = MOD["run_all"]
 format_report = MOD["format_report"]
+main = MOD["main"]
 
 VALID_ORIGIN = "https://github.com/jmartinlabs/agentic-harness-plugin.git"
 
@@ -412,6 +413,100 @@ class UpdateAgenticTests(unittest.TestCase):
         self.assertEqual(mock_run.call_args.kwargs["timeout"], 5)
         self.assertEqual(res.returncode, 124)
         self.assertIn("timed out after 5s", res.stderr)
+
+    def test_hermes_check_reports_profiles_without_plugin_skills_read_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            shared_repo = home / ".local" / "share" / "agentic-harness-plugin"
+            hermes_home = home / ".hermes"
+            _setup_shared_harnesses(home, shared_repo, version="1.2.2")
+
+            # CA2: profile with valid symlink to shared_repo -> should NOT be reported
+            good_skills = hermes_home / "profiles" / "good-profile" / "skills"
+            good_skills.mkdir(parents=True, exist_ok=True)
+            (good_skills / "verify-project").symlink_to(shared_repo / "skills" / "verify-project")
+
+            # CA4: profile with foreign homonymous work-issue (local dir, not plugin symlink) -> reported
+            eng_skills = hermes_home / "profiles" / "engineering-lead" / "skills" / "work-issue"
+            eng_skills.mkdir(parents=True, exist_ok=True)
+            (eng_skills / "SKILL.md").write_text("# local work-issue\n", encoding="utf-8")
+
+            # CA4 variant: profile with symlink to unrelated directory -> reported
+            other_skill = Path(tmp) / "unrelated-skills" / "work-issue"
+            other_skill.mkdir(parents=True, exist_ok=True)
+            ext_skills = hermes_home / "profiles" / "external-link" / "skills"
+            ext_skills.mkdir(parents=True, exist_ok=True)
+            (ext_skills / "work-issue").symlink_to(other_skill)
+
+            # CA3: profile without skills/ directory -> reported explicitly as missing skills/
+            no_skills_prof = hermes_home / "profiles" / "no-skills-prof"
+            no_skills_prof.mkdir(parents=True, exist_ok=True)
+            cfg_file = no_skills_prof / "config.yaml"
+            cfg_file.write_text("model: default\n", encoding="utf-8")
+
+            # Non-directory entry under profiles/ should be ignored
+            (hermes_home / "profiles" / ".DS_Store").write_text("", encoding="utf-8")
+
+            before_tree = sorted(str(p.relative_to(hermes_home)) for p in hermes_home.rglob("*"))
+
+            def forbid_runner(cmd, cwd, timeout):
+                raise AssertionError(f"Unexpected command in --check: {cmd}")
+
+            results = run_all(
+                check_only=True,
+                home=home,
+                env={"AGENTIC_SHARED_REPO": str(shared_repo), "HERMES_HOME": str(hermes_home)},
+                runner=forbid_runner,
+                which=lambda _name: None,
+            )
+
+            by_name = {r.harness: r for r in results}
+            hermes_res = by_name["hermes"]
+            self.assertEqual(hermes_res.status, "installed")
+            self.assertEqual(hermes_res.version_before, "1.2.2")
+            self.assertIn("engineering-lead", hermes_res.detail)
+            self.assertIn("external-link", hermes_res.detail)
+            self.assertIn("no-skills-prof (missing skills/)", hermes_res.detail)
+            self.assertNotIn("good-profile", hermes_res.detail)
+            self.assertNotIn(".DS_Store", hermes_res.detail)
+
+            report = format_report(results, check_only=True)
+            self.assertIn("engineering-lead", report)
+            self.assertIn("no-skills-prof (missing skills/)", report)
+            self.assertNotIn("good-profile", report)
+
+            # CA5: verify strictly read-only (no files/dirs/symlinks created, config.yaml untouched)
+            after_tree = sorted(str(p.relative_to(hermes_home)) for p in hermes_home.rglob("*"))
+            self.assertEqual(before_tree, after_tree)
+            self.assertFalse((no_skills_prof / "skills").exists())
+            self.assertEqual(cfg_file.read_text(encoding="utf-8"), "model: default\n")
+
+    def test_hermes_without_profiles_preserves_existing_result_and_exit_code(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            shared_repo = home / ".local" / "share" / "agentic-harness-plugin"
+            hermes_home = home / ".hermes"
+            _setup_shared_harnesses(home, shared_repo, version="1.2.2")
+
+            with mock.patch.dict(
+                "os.environ",
+                {"HOME": str(home), "AGENTIC_SHARED_REPO": str(shared_repo), "HERMES_HOME": str(hermes_home)},
+                clear=True,
+            ), mock.patch.object(MOD["shutil"], "which", return_value=None):
+                # Capture stdout and verify exit code 0 and unchanged detail
+                results = run_all(
+                    check_only=True,
+                    home=home,
+                    env={"AGENTIC_SHARED_REPO": str(shared_repo), "HERMES_HOME": str(hermes_home)},
+                    runner=lambda *_: (_ for _ in ()).throw(AssertionError("unexpected call")),
+                    which=lambda _name: None,
+                )
+                by_name = {r.harness: r for r in results}
+                self.assertEqual(by_name["hermes"].status, "installed")
+                self.assertEqual(by_name["hermes"].detail, f"shared repo: {shared_repo}")
+                with mock.patch("builtins.print"):
+                    exit_code = main(["--check"])
+                self.assertEqual(exit_code, 0)
 
 
 if __name__ == "__main__":

@@ -61,7 +61,7 @@ done
 
 ### Hermes Agent
 
-Hermes loads skills natively at user scope. Clone `stable` once per user and symlink `skills/*` into `${HERMES_HOME:-$HOME/.hermes}/skills` (no files are copied into projects), and always start `hermes` from the project root. See [adapters/hermes/README.md](adapters/hermes/README.md) for full install, update, rollback and optional `model_map` role-routing instructions.
+Hermes loads skills natively at user scope. Clone `stable` once per user and symlink `skills/*` into `${HERMES_HOME:-$HOME/.hermes}/skills` (no files are copied into projects), and always start `hermes` from the project root. `scripts/update-agentic --check` also inspects `${HERMES_HOME:-$HOME/.hermes}/profiles/*/` in read-only mode and warns about profiles whose `skills/` directory is missing or lacks symlinks to the shared checkout (without creating or repairing profile links). See [adapters/hermes/README.md](adapters/hermes/README.md) for full install, update, rollback and optional `model_map` role-routing instructions.
 
 ---
 

@@ -415,6 +415,31 @@ def _update_symlink_harness(name: str, dirs: Sequence[Path], shared: SharedRepoM
     return HarnessResult(name, status, detail=f"custom symlink target: {target}")
 
 
+def _find_hermes_profiles_without_plugin_skills(hermes_home: Path, shared_repo: Path) -> list[str]:
+    profiles_dir = hermes_home / "profiles"
+    if not profiles_dir.is_dir():
+        return []
+    missing: list[str] = []
+    for profile_dir in sorted(profiles_dir.iterdir()):
+        if not profile_dir.is_dir() or profile_dir.name.startswith("."):
+            continue
+        skills_dir = profile_dir / "skills"
+        if not skills_dir.is_dir():
+            missing.append(f"{profile_dir.name} (missing skills/)")
+        elif _find_symlink_target((skills_dir,), shared_repo) is None:
+            missing.append(profile_dir.name)
+    return missing
+
+
+def update_hermes(hermes_home: Path, shared: SharedRepoManager) -> HarnessResult:
+    res = _update_symlink_harness("hermes", (hermes_home / "skills",), shared)
+    missing_profiles = _find_hermes_profiles_without_plugin_skills(hermes_home, shared.repo_path)
+    if missing_profiles:
+        warning = f"profiles without plugin skills: {', '.join(missing_profiles)}"
+        res.detail = f"{res.detail}; {warning}" if res.detail else warning
+    return res
+
+
 def update_antigravity(home: Path, runner: Runner, shared: SharedRepoManager, check_only: bool, timeout: int) -> HarnessResult:
     plugin_dir = home / ".gemini" / "config" / "plugins" / "agentic"
     if not (plugin_dir / ".antigravity-plugin" / "plugin.json").is_file():
@@ -460,7 +485,7 @@ def run_all(
         ("opencode", lambda: _update_symlink_harness(
             "opencode", (opencode_dir / "skills", opencode_dir / "agents", opencode_dir / "plugins"), shared
         )),
-        ("hermes", lambda: _update_symlink_harness("hermes", (hermes_home / "skills",), shared)),
+        ("hermes", lambda: update_hermes(hermes_home, shared)),
         ("antigravity", lambda: update_antigravity(eff_home, runner, shared, check_only, timeout)),
     )
     results: list[HarnessResult] = []
