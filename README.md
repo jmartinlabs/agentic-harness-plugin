@@ -20,6 +20,14 @@ codex plugin marketplace add https://github.com/jmartinlabs/agentic-harness-plug
 codex plugin add agentic@agentic-harness
 ```
 
+### Antigravity
+
+```sh
+antigravity plugin install https://github.com/jmartinlabs/agentic-harness-plugin/tree/stable
+```
+
+Antigravity installs globally per user under `$HOME/.gemini/config/plugins/agentic` from a Git branch (not a commit SHA). It loads `.antigravity-plugin/plugin.json` and the 13 skills as bare names (e.g. `verify-project`, `orchestrate`); it skips `agents/*.md` and `hooks/hooks.json`.
+
 ### OpenCode (global per-user adapter)
 
 OpenCode loads user-level agents, plugins and skills from `~/.config/opencode/`. Clone the plugin once at a user path tracking `stable` and symlink the OpenCode adapter and shared skills into `~/.config/opencode/`:
@@ -54,6 +62,9 @@ codex plugin marketplace upgrade agentic-harness
 ```
 
 ```sh
+antigravity plugin uninstall agentic
+antigravity plugin install https://github.com/jmartinlabs/agentic-harness-plugin/tree/stable
+
 # OpenCode (global per-user adapter)
 git -C ~/.local/share/agentic-harness-plugin pull --ff-only origin stable
 ```
@@ -73,6 +84,8 @@ codex plugin marketplace remove agentic-harness
 ```
 
 ```sh
+antigravity plugin uninstall agentic
+
 # OpenCode (global per-user adapter): check out the previous tag, or `stable` to return
 git -C ~/.local/share/agentic-harness-plugin fetch --tags
 git -C ~/.local/share/agentic-harness-plugin checkout v1.0.0

@@ -6,7 +6,7 @@ description: Deliver a medium scoped feature through a short plan, concise accep
 # task
 
 ## Inputs
-Read AGENTS.md, approved Standard classification, relevant guidelines, existing code, related specs and roadmap if present.
+Read AGENTS.md, specs/project-rules.md (when present), approved Standard classification, relevant guidelines, existing code, related specs and roadmap if present.
 ## Outputs
 Concise task plan and acceptance checks, incremental implementation, verification and review evidence. Persist a task note only if work spans sessions or needs traceability.
 ## Procedure

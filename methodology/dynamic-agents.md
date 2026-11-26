@@ -78,8 +78,10 @@ There is no v1 reader or fallback. `external` is covered by the
 Each configured profile sets at least one of `model` and `effort`. Resolve each field
 separately: an authorized explicit owner selection for the task, a concrete profile value, a concrete local default, then native inheritance.
 An omitted or null value passes through to the next source. Never borrow a value from another
-role. A suggested profile that is absent uses the defaults without a profile label. An explicitly required profile that is absent, invalid or
-unsupported stops dispatch. Use the existing complexity analysis: standard suits bounded work
+role. A configured default or profile is a request, not a hard requirement: if the client cannot
+apply or confirm it, fall back to native inheritance and report it as not applied/unverified (never
+silently discard it). A suggested profile that is absent uses the defaults without a profile label.
+Only an explicitly required selection that is absent, invalid or unsupported stops dispatch. Use the existing complexity analysis: standard suits bounded work
 with known contracts, while complex can fit interacting state, high uncertainty or significant
 risk. Record a short reason only when selecting a profile. The selected level preserves the
 coordinator's settings, the role's permissions and QA independence.

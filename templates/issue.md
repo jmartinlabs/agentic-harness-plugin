@@ -20,7 +20,7 @@ development before the scope is authorized; a phase request is not an authorizat
 
 ## Routing
 
-Optional: one label `agent:opencode`, `agent:hermes`, `agent:codex` or `agent:claude` (the bare
+Optional: one label `agent:opencode`, `agent:hermes`, `agent:codex`, `agent:claude` or `agent:antigravity` (the bare
 name is an alias) to route the Issue to that agent; no label means any compatible agent. A
 label is routing, never authorization. The GitHub assignee is ignored by agents.
 

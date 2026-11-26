@@ -2266,7 +2266,7 @@ class ContractTests(unittest.TestCase):
                 self.assertIsNotNone(validate_transition(status, target), (status, target))
 
     def test_agents_catalogue_is_the_documented_one(self):
-        self.assertEqual(MODULE["AGENTS"], ["opencode", "hermes", "codex", "claude"])
+        self.assertEqual(MODULE["AGENTS"], ["opencode", "hermes", "codex", "claude", "antigravity"])
 
     def test_tool_has_no_project_repository_or_owner_defaults(self):
         source = SCRIPT.read_text(encoding="utf-8")
