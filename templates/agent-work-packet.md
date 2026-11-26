@@ -1,6 +1,6 @@
 # Agent work packet (template)
 
-> Copy into the coordinator's task context per delegate. This is NOT an agent-registration format or an instruction to create a worker when the environment cannot support it. A Quick task the coordinator does itself needs no packet; add a field only when it applies.
+> Copy into the coordinator's task context per delegate. This is NOT an agent-registration format or an instruction to create a worker when the environment cannot support it. Quick tasks use a compact packet for one bounded worker; add a field only when it applies.
 
 - **Packet ID and profile:** `<functional-id> · <STAGE>-<NN>` (plus `DEV-nn — <name>` for DEV); Functional | Implementation | QA | Infrastructure | bounded custom.
 - **Objective and done criteria:** UNSET
