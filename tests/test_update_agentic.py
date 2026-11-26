@@ -466,6 +466,37 @@ class UpdateAgenticTests(unittest.TestCase):
             non_skill_link_dir.mkdir(parents=True, exist_ok=True)
             (non_skill_link_dir / "implementation.md").symlink_to(outside_skills / "implementation.md")
 
+            # Symlink to <shared>/skills/README.md (loose file) -> reported
+            skills_readme = shared_repo / "skills" / "README.md"
+            skills_readme.write_text("# skills\n", encoding="utf-8")
+            readme_link_dir = hermes_home / "profiles" / "readme-link" / "skills"
+            readme_link_dir.mkdir(parents=True, exist_ok=True)
+            (readme_link_dir / "README.md").symlink_to(skills_readme)
+
+            # Symlink to <shared>/skills/<skill>/SKILL.md (file inside skill) -> reported
+            skill_md = shared_repo / "skills" / "verify-project" / "SKILL.md"
+            skill_md.write_text("# verify-project\n", encoding="utf-8")
+            skill_md_link_dir = hermes_home / "profiles" / "skill-md-link" / "skills"
+            skill_md_link_dir.mkdir(parents=True, exist_ok=True)
+            (skill_md_link_dir / "SKILL.md").symlink_to(skill_md)
+
+            # Symlink to nested subdirectory of a skill -> reported
+            nested_dir = shared_repo / "skills" / "verify-project" / "references"
+            nested_dir.mkdir(parents=True, exist_ok=True)
+            nested_link_dir = hermes_home / "profiles" / "nested-subdir-link" / "skills"
+            nested_link_dir.mkdir(parents=True, exist_ok=True)
+            (nested_link_dir / "references").symlink_to(nested_dir)
+
+            # <perfil>/skills symlinked directly to <shared>/skills -> NOT reported
+            dir_link_prof = hermes_home / "profiles" / "good-dir-link"
+            dir_link_prof.mkdir(parents=True, exist_ok=True)
+            (dir_link_prof / "skills").symlink_to(shared_repo / "skills")
+
+            # <perfil>/skills symlinked directly to another checkout's skills/ -> reported
+            other_dir_link_prof = hermes_home / "profiles" / "other-dir-link"
+            other_dir_link_prof.mkdir(parents=True, exist_ok=True)
+            (other_dir_link_prof / "skills").symlink_to(other_checkout_skill.parent)
+
             before_tree = sorted(str(p.relative_to(hermes_home)) for p in hermes_home.rglob("*"))
 
             def forbid_runner(cmd, cwd, timeout):
@@ -488,9 +519,14 @@ class UpdateAgenticTests(unittest.TestCase):
             self.assertIn("external-link", hermes_res.detail)
             self.assertIn("other-checkout", hermes_res.detail)
             self.assertIn("non-skill-link", hermes_res.detail)
+            self.assertIn("readme-link", hermes_res.detail)
+            self.assertIn("skill-md-link", hermes_res.detail)
+            self.assertIn("nested-subdir-link", hermes_res.detail)
+            self.assertIn("other-dir-link", hermes_res.detail)
             self.assertIn(".hidden-prof (missing skills/)", hermes_res.detail)
             self.assertIn("no-skills-prof (missing skills/)", hermes_res.detail)
             self.assertNotIn("good-profile", hermes_res.detail)
+            self.assertNotIn("good-dir-link", hermes_res.detail)
             self.assertNotIn(".DS_Store", hermes_res.detail)
 
             report = format_report(results, check_only=True)
