@@ -2,6 +2,14 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/), see [RELEASING.md](RELEASING.md).
 
+## [1.2.2] - 2026-11-26
+
+### Added
+- Added `scripts/update-agentic`, a stdlib-only multi-harness updater and read-only `--check` mode across all five harnesses, with single shared-repo pull, timeouts, local Codex `config.toml`/cache detection, and strict version verification (#31, PR #32).
+
+### Changed
+- Simplified `README.md` user guide and Antigravity Desktop documentation (#9, PR #30).
+
 ## [1.2.1] - 2026-11-26
 
 ### Changed
