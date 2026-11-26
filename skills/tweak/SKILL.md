@@ -6,7 +6,7 @@ description: Implement a small low-risk change or straightforward bug fix with m
 # tweak
 
 ## Inputs
-Read AGENTS.md, affected code and applicable project guidelines. Use an authorized orchestrate Quick scope if available; load workflow or approval policy when classification or a gate is uncertain.
+Read AGENTS.md, specs/project-rules.md (when present), affected code and applicable project guidelines. Use an authorized orchestrate Quick scope if available; load workflow or approval policy when classification or a gate is uncertain.
 ## Outputs
 Minimal diff, relevant tests or clearly reported limitations, brief summary. No mandatory brainstorm/spec/progress files.
 ## Procedure

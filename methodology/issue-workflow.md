@@ -174,7 +174,7 @@ which changes Status. Publish a new receipt after `take` and before the first
 ## Agent routing
 
 Routing uses the canonical label `agent:X`, where X is in the agent catalogue (default
-`opencode`, `hermes`, `codex`, `claude`); the bare name (`codex`) is accepted as an alias. A
+`opencode`, `hermes`, `codex`, `claude`, `antigravity`); the bare name (`codex`) is accepted as an alias. A
 checkout may replace the catalogue with `agents:` in its local `.agents/tracker.local.yaml`
 (`agents: claude, codex`). `agent:X` **fails closed** when X is unknown. At most one recognized
 agent label; no agent label means any compatible agent. Two agent labels, an unknown agent or

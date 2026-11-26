@@ -6,7 +6,7 @@ description: Specify a roadmap epic by number or a new feature by name through r
 # spec
 
 ## Inputs
-Read `AGENTS.md`, [document ownership](../../methodology/document-ownership.md), existing state and applicable guidelines before acting.
+Read `AGENTS.md`, `specs/project-rules.md` (when present), [document ownership](../../methodology/document-ownership.md), existing state and applicable guidelines before acting.
 Functional delegates also follow [the functional role](../../roles/functional.md) and their work packet.
 ## Outputs
 `specs/{nr}-{slug}-brainstorming.md` and `specs/{nr}-{slug}-specification.md`,

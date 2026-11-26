@@ -6,7 +6,7 @@ description: Implement an approved specification in verified increments with pro
 # dev
 
 ## Inputs
-Read `AGENTS.md`, [document ownership](../../methodology/document-ownership.md), existing state and applicable guidelines before acting.
+Read `AGENTS.md`, `specs/project-rules.md` (when present), [document ownership](../../methodology/document-ownership.md), existing state and applicable guidelines before acting.
 ## Outputs
 Working increments, `specs/{nr}-{slug}-progress.md`, `specs/{nr}-{slug}-testplan.md`,
 verified acceptance evidence, relevant documentation updates and local commits.

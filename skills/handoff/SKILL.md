@@ -9,7 +9,7 @@ An explicit **shutdown/transfer command**. It does not resume, finish the featur
 new work, and it grants no new permissions. It covers the current authorized session only.
 
 ## Inputs
-Only what is needed to stop safely: current progress/checkpoint, `git status`, active worker
+Only what is needed to stop safely: `specs/project-rules.md` (when present), current progress/checkpoint, `git status`, active worker
 handles in this session, and existing task, branch, worktree, PR and approval evidence.
 
 ## Outputs

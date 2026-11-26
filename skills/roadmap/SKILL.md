@@ -6,7 +6,7 @@ description: Interview the user and produce or revise an approved four-epic MVP 
 # roadmap
 
 ## Inputs
-Read `AGENTS.md`, [document ownership](../../methodology/document-ownership.md), existing state and applicable guidelines before acting.
+Read `AGENTS.md`, `specs/project-rules.md` (when present), [document ownership](../../methodology/document-ownership.md), existing state and applicable guidelines before acting.
 ## Outputs
 Approved `specs/roadmap.md` based on `templates/roadmap.md`, committed locally.
 ## Procedure

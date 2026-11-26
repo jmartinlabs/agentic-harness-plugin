@@ -13,6 +13,7 @@ import argparse
 import hashlib
 import json
 import re
+import subprocess
 import sys
 from collections import Counter
 from pathlib import Path
@@ -43,7 +44,7 @@ CANONICAL_ROLES = ("functional", "implementation", "qa-review", "infrastructure"
 EXTERNAL_TASKS = ("review", "investigate", "develop")
 EXTERNAL_MODES = ("automatic", "on_request", "disabled")
 EXTERNAL_TRANSPORTS = ("cli",)
-HARNESS_NAMES = ("claude", "codex", "opencode", "hermes")
+HARNESS_NAMES = ("claude", "codex", "opencode", "hermes", "antigravity")
 
 
 def unique_json_object(pairs):
@@ -285,21 +286,32 @@ def check_provenance(root):
 
 
 def check_hook(root):
+    codex_usage = {"type": "command", "command": 'python3 "${PLUGIN_ROOT}/scripts/auto-agent-usage"', "timeout": 3}
     configs = {
-        "hooks/hooks.json": 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/session-start.py" --claude',
-        "hooks/codex.json": 'python3 "${PLUGIN_ROOT}/hooks/session-start.py"',
+        "hooks/hooks.json": {
+            "SessionStart": {"type": "command", "command": 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/session-start.py" --claude'},
+        },
+        "hooks/codex.json": {
+            "SessionStart": {"type": "command", "command": 'python3 "${PLUGIN_ROOT}/hooks/session-start.py"'},
+            "Stop": codex_usage,
+            "SubagentStop": codex_usage,
+            "SessionEnd": codex_usage,
+        },
     }
     errors = []
     if (root / "plugin.json").exists():
         errors.append("hook: portable plugin.json takes precedence and suppresses native hooks in Codex 0.172.0")
-    for name, command in configs.items():
+    for name, expected in configs.items():
         try:
             config = load_json(root / name)
-            (group,) = config["hooks"]["SessionStart"]
-            (hook,) = group["hooks"]
-            if (list(config) != ["hooks"] or list(config["hooks"]) != ["SessionStart"]
-                    or hook != {"type": "command", "command": command}):
-                errors.append(f"hook: unexpected SessionStart configuration in {name}")
+            if list(config) != ["hooks"] or list(config["hooks"]) != list(expected):
+                errors.append(f"hook: unexpected hook configuration in {name}")
+                continue
+            for event, expected_hook in expected.items():
+                (group,) = config["hooks"][event]
+                (hook,) = group["hooks"]
+                if hook != expected_hook:
+                    errors.append(f"hook: unexpected {event} configuration in {name}")
         except (OSError, ValueError, KeyError, TypeError) as error:
             errors.append(f"hook: {name}: {error}")
     try:
@@ -408,11 +420,114 @@ def check_agent_catalogue(root):
     return errors
 
 
+SECRET_PATTERNS = (
+    ("private key", re.compile(r"-----BEGIN (?:[A-Z0-9 ]+ )?PRIVATE KEY-----")),
+    ("GitHub token", re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,})\b")),
+    ("API key", re.compile(r"\b(?:sk-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16})\b")),
+    ("Slack token", re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{10,}\b")),
+)
+LOCAL_PATH_PATTERN = re.compile(r"(?:/Users/[A-Za-z0-9._-]+|/home/[A-Za-z0-9._-]+|[A-Za-z]:\\Users\\[A-Za-z0-9._-]+)")
+REQUIRED_PHRASES = {
+    "skills/orchestrate/SKILL.md": (
+        "specs/project-rules.md",
+        "STOP REQUESTED — NO AUTO-RESUME",
+        "PASS / FAIL / UNRUN",
+        "fall back to native inheritance",
+    ),
+    "skills/task/SKILL.md": ("specs/project-rules.md",),
+    "skills/tweak/SKILL.md": ("specs/project-rules.md",),
+    "skills/spec/SKILL.md": ("specs/project-rules.md",),
+    "skills/dev/SKILL.md": ("specs/project-rules.md",),
+    "skills/roadmap/SKILL.md": ("specs/project-rules.md",),
+    "skills/work-issue/SKILL.md": ("specs/project-rules.md", "agentic-work-issue"),
+    "skills/handoff/SKILL.md": ("specs/project-rules.md", "STOP REQUESTED — NO AUTO-RESUME"),
+    "skills/relay/SKILL.md": ("specs/project-rules.md", "agentic-relay"),
+    "methodology/dynamic-agents.md": ("validate-core --project", "fall back to native inheritance"),
+    "roles/implementation.md": ("$dev", "$task"),
+}
+
+
+def plugin_text_files(root):
+    root = Path(root)
+    files = []
+    for path in sorted(root.rglob("*")):
+        if not path.is_file():
+            continue
+        parts = path.relative_to(root).parts
+        if any(part in (".git", "__pycache__", "tests") for part in parts):
+            continue
+        files.append(path)
+    return files
+
+
+def check_secrets(root):
+    errors = []
+    for path in plugin_text_files(root):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            continue
+        relative = path.relative_to(root).as_posix()
+        for lineno, line in enumerate(text.splitlines(), 1):
+            for label, pattern in SECRET_PATTERNS:
+                if pattern.search(line):
+                    errors.append(f"secrets: {relative}:{lineno}: potential {label} detected")
+    return errors
+
+
+def check_neutrality(root):
+    errors = []
+    for path in plugin_text_files(root):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            continue
+        relative = path.relative_to(root).as_posix()
+        for lineno, line in enumerate(text.splitlines(), 1):
+            if LOCAL_PATH_PATTERN.search(line):
+                errors.append(f"neutrality: {relative}:{lineno}: hardcoded local user path")
+    return errors
+
+
+def check_git_diff(root):
+    if not (Path(root) / ".git").exists():
+        return []
+    errors = []
+    for extra in ((), ("--cached",)):
+        try:
+            proc = subprocess.run(
+                ["git", "-C", str(root), "diff", *extra, "--check"],
+                capture_output=True, text=True, check=False,
+            )
+        except OSError:
+            return []
+        if proc.returncode != 0:
+            for line in (proc.stdout or proc.stderr).splitlines():
+                if line.strip():
+                    errors.append(f"git-diff: {line.strip()}")
+    return errors
+
+
+def check_required_phrases(root):
+    errors = []
+    for relative, phrases in REQUIRED_PHRASES.items():
+        path = Path(root) / relative
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError as error:
+            errors.append(f"required-phrases: {relative}: {error}")
+            continue
+        for phrase in phrases:
+            if phrase not in text:
+                errors.append(f"required-phrases: {relative}: missing required phrase {phrase!r}")
+    return errors
+
+
 def validate_plugin(root=PLUGIN_ROOT):
     root = Path(root).resolve()
     errors = []
     for check in (check_manifests, check_provenance, check_hook, check_frontmatter, check_links, check_shims,
-                  check_agent_catalogue):
+                  check_agent_catalogue, check_secrets, check_neutrality, check_git_diff, check_required_phrases):
         errors.extend(check(root))
     return errors
 
