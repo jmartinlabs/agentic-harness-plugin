@@ -26,89 +26,10 @@ class TempCase(unittest.TestCase):
         self.addCleanup(temp.cleanup)
         self.tmp = Path(temp.name).resolve()
 
-    def project(self, name, agents=None):
+    def project(self, name):
         path = self.tmp / name
         path.mkdir()
-        if agents:
-            (path / ".agents").mkdir()
-            (path / ".agents" / "tracker.local.yaml").write_text(f"agents: [{agents}]\n")
         return path
-
-
-class WorkIssueProjectRoot(TempCase):
-    def run_tool(self, cwd, *args, tool=None):
-        proc = subprocess.run([sys.executable, str(tool or SCRIPTS / "work-issue"), *args],
-                              cwd=str(cwd), capture_output=True, text=True)
-        return proc.returncode, proc.stderr
-
-    def accepted(self, cwd, agent, *rest, tool=None):
-        code, err = self.run_tool(cwd, "--repo", "o/n", "--agent", agent, *rest, tool=tool)
-        self.assertNotIn("invalid choice", err)
-        self.assertIn("no GitHub Project", err)
-        self.assertEqual(code, 3)
-
-    def rejected(self, cwd, agent, *rest, tool=None):
-        code, err = self.run_tool(cwd, "--repo", "o/n", "--agent", agent, *rest, tool=tool)
-        self.assertEqual(code, 2)
-        self.assertIn("invalid choice", err)
-
-    def test_the_plugin_itself_has_no_tracker_file(self):
-        self.assertFalse((ROOT / ".agents" / "tracker.local.yaml").exists())
-
-    def test_catalogue_comes_from_the_working_directory_project(self):
-        project = self.project("proj", "zeta")
-        self.accepted(project, "zeta", "inventory")
-        self.rejected(project, "opencode", "inventory")
-
-    def test_catalogue_comes_from_the_git_top_level_of_a_subdirectory(self):
-        project = self.project("proj", "zeta")
-        git("init", "-q", cwd=project)
-        sub = project / "a" / "b"
-        sub.mkdir(parents=True)
-        self.accepted(sub, "zeta", "inventory")
-
-    def test_a_directory_without_the_file_uses_the_default_catalogue(self):
-        other = self.project("plain")
-        self.accepted(other, "opencode", "inventory")
-        self.rejected(other, "zeta", "inventory")
-
-    def test_repo_root_selects_a_sibling_project(self):
-        project = self.project("proj", "zeta")
-        other = self.project("plain")
-        self.accepted(other, "zeta", "context", "--issue", "1", "--repo-root", str(project))
-        self.accepted(other, "zeta", "context", "--issue", "1", f"--repo-root={project}")
-        self.rejected(other, "zeta", "context", "--issue", "1")
-
-    def test_a_file_beside_the_tool_is_never_read(self):
-        fake = self.tmp / "fake-plugin"
-        (fake / "scripts").mkdir(parents=True)
-        (fake / ".agents").mkdir()
-        (fake / ".agents" / "tracker.local.yaml").write_text("agents: [trap]\n")
-        shutil.copy(SCRIPTS / "work-issue", fake / "scripts" / "work-issue")
-        other = self.project("plain")
-        self.rejected(other, "trap", "inventory", tool=fake / "scripts" / "work-issue")
-        self.accepted(other, "opencode", "inventory", tool=fake / "scripts" / "work-issue")
-
-    def test_project_root_defaults_to_the_git_top_level_and_honours_repo_root(self):
-        api = runpy.run_path(str(SCRIPTS / "work-issue"))
-        project = self.project("proj")
-        git("init", "-q", cwd=project)
-        sub = project / "a"
-        sub.mkdir()
-        plain = self.project("plain")
-        old = Path.cwd()
-        try:
-            os.chdir(sub)
-            self.assertEqual(api["project_root"]().resolve(), project)
-            os.chdir(plain)
-            self.assertEqual(api["project_root"]().resolve(), plain)
-            self.assertEqual(api["project_root"](project), project)
-        finally:
-            os.chdir(old)
-
-    def test_the_tool_does_not_locate_the_project_from_its_own_file(self):
-        source = (SCRIPTS / "work-issue").read_text(encoding="utf-8")
-        self.assertNotIn("__file__", source)
 
 
 class RelayAndUsageProjectData(TempCase):

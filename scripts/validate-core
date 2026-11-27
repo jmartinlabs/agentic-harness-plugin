@@ -27,16 +27,12 @@ CLASSES = {"copy", "link-rewrite", "path-reword", "deliberate-delta"}
 MANIFESTS = (".codex-plugin/plugin.json", ".claude-plugin/plugin.json", ".antigravity-plugin/plugin.json")
 MARKETPLACES = (".claude-plugin/marketplace.json", ".agents/plugins/marketplace.json")
 SHIMS = {
-    "agentic-work-issue": "work-issue",
     "agentic-relay": "agent-relay",
     "agentic-check-delegation-route": "check-delegation-route",
     "agentic-usage-report": "report-agent-usage",
     "agentic-usage-auto": "auto-agent-usage",
     "agentic-verify-project": "verify-project.py",
 }
-# The agent catalogue is DEFAULT_AGENTS in scripts/work-issue (single source); these shipped
-# documents name the agents and must name all of them.
-CATALOGUE_TOOL = "scripts/work-issue"
 CATALOGUE_DOCS = ("methodology/issue-workflow.md", "skills/work-issue/SKILL.md", "templates/issue.md")
 
 # --- Harness JSON v2 (ported from the template validator `check_harness`) -------------------
@@ -400,21 +396,13 @@ def check_shims(root):
 
 def check_agent_catalogue(root):
     errors = []
-    try:
-        source = (root / CATALOGUE_TOOL).read_text(encoding="utf-8")
-    except OSError as error:
-        return [f"agent-catalogue: {CATALOGUE_TOOL}: {error}"]
-    match = re.search(r"(?m)^DEFAULT_AGENTS = \(([^)]*)\)", source)
-    agents = re.findall(r'"([a-z][a-z0-9-]*)"', match[1]) if match else []
-    if not agents:
-        return [f"agent-catalogue: {CATALOGUE_TOOL}: DEFAULT_AGENTS catalogue not found"]
     for name in CATALOGUE_DOCS:
         try:
             text = (root / name).read_text(encoding="utf-8")
         except OSError as error:
             errors.append(f"agent-catalogue: {name}: {error}")
             continue
-        for agent in agents:
+        for agent in HARNESS_NAMES:
             if f"`{agent}`" not in text and f"`agent:{agent}`" not in text:
                 errors.append(f"agent-catalogue: {name}: agent catalogue drift, missing {agent}")
     return errors
@@ -439,7 +427,7 @@ REQUIRED_PHRASES = {
     "skills/spec/SKILL.md": ("specs/project-rules.md",),
     "skills/dev/SKILL.md": ("specs/project-rules.md",),
     "skills/roadmap/SKILL.md": ("specs/project-rules.md",),
-    "skills/work-issue/SKILL.md": ("specs/project-rules.md", "agentic-work-issue"),
+    "skills/work-issue/SKILL.md": ("specs/project-rules.md",),
     "skills/handoff/SKILL.md": ("specs/project-rules.md", "STOP REQUESTED — NO AUTO-RESUME"),
     "skills/relay/SKILL.md": ("specs/project-rules.md", "agentic-relay"),
     "methodology/dynamic-agents.md": ("validate-core --project", "fall back to native inheritance"),

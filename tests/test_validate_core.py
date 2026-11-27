@@ -244,7 +244,7 @@ class PluginCase(unittest.TestCase):
         (root / "bin" / "agentic-relay").chmod(0o644)
         self.assertRule(root, "shims")
         root = self.fixture()
-        (root / "scripts" / "work-issue").unlink()
+        (root / "scripts" / "agent-relay").unlink()
         self.assertRule(root, "shims")
 
     def test_agent_catalogue_drift_is_detected(self):
@@ -255,14 +255,6 @@ class PluginCase(unittest.TestCase):
             path.write_text(path.read_text().replace("`hermes`", "`other`").replace("`agent:hermes`", "`agent:other`"))
             found = [e for e in self.problems(root) if e.startswith("agent-catalogue:")]
             self.assertEqual(found, [f"agent-catalogue: {name}: agent catalogue drift, missing hermes"])
-        root = self.fixture()
-        path = root / "scripts" / "work-issue"
-        path.write_text(path.read_text().replace('DEFAULT_AGENTS = ("opencode", "hermes", "codex", "claude", "antigravity")',
-                                                 'DEFAULT_AGENTS = ("opencode", "hermes", "codex", "claude", "antigravity", "newone")'))
-        found = [e for e in self.problems(root) if e.startswith("agent-catalogue:")]
-        self.assertEqual(len(found), 3, found)
-        path.write_text(path.read_text().replace("DEFAULT_AGENTS", "OTHER_AGENTS", 1))
-        self.assertRule(root, "agent-catalogue")
 
     def test_secret_scan_detects_tokens_and_keys(self):
         root = self.fixture()

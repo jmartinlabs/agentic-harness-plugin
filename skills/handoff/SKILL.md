@@ -1,85 +1,24 @@
 ---
 name: handoff
-description: Stop an active agent session safely, consolidate recoverable work and preserve a verifiable checkpoint for another session.
+description: Stop or transfer an active session safely with a selective, verifiable current-state checkpoint.
 ---
 
-# handoff — consolidate and stop
+# handoff
 
-An explicit **shutdown/transfer command**. It does not resume, finish the feature or start
-new work, and it grants no new permissions. It covers the current authorized session only.
-
-## Inputs
-Only what is needed to stop safely: `specs/project-rules.md` (when present), current progress/checkpoint, `git status`, active worker
-handles in this session, and existing task, branch, worktree, PR and approval evidence.
-
-## Outputs
-- A small durable checkpoint in the existing progress file, setup-progress file or coordinator
-  board; otherwise `specs/session-handoff.md` (one current handoff).
-- A short receipt: checkpoint path, branch/commit SHA, pending changes, real worker-stop status,
-  next-session instruction.
+Adaptive checkpointing: recommend a new session on context saturation or phase change, never impose it. Read `specs/project-rules.md` (when present) and current Git/PR/approval state. Never merge or bypass gates.
 
 ## Procedure
-1. **Freeze scope now.** Stop issuing new development, research, long tests, delegation,
-   scheduling, PR or merge actions. Override any automatic ready queue. Only reach a safe
-   boundary; do not try to finish acceptance criteria or a "quick fix".
-2. **Stop controlled workers.** Where the runtime supports it, request stop and a short final
-   checkpoint. Record each as `stopped`, `stop requested` or `unconfirmed`, based on evidence.
-   Other chats, separately launched tasks and workers without accessible controls are
-   **not controlled** here: never report them as stopped; tell the user to interrupt them.
-3. **Inventory, never destroy.** Check `git status`, branch/HEAD SHA, worktrees, PR, uncommitted
-   files and who owns each change. Do not reset, discard, overwrite, delete worktrees, stash
-   files of unclear ownership or amend others' commits.
-4. **Preserve authorized work.** If safe and permitted, review owned changes (including secret
-   or data leaks) and commit a labeled WIP checkpoint on the existing feature branch. Push only
-   if the project allows it. Never merge, deploy or open a PR. If work cannot be committed or
-   pushed, list the pending files and mark remote portability **unverified**.
-5. **Write the minimum handoff.** Reuse the existing progress or board file. Include:
-   `STOP REQUESTED — NO AUTO-RESUME`; feature and authorized scope; repo, branch, worktree, HEAD,
-   PR; decisions and their sources; worker stop status; done vs partial work and uncommitted changes; checks as PASS/FAIL/UNRUN
-   with evidence and candidate SHA; open bugs and blocked gates; approvals still valid vs pending;
-   **one next safe action**. Link specs instead of copying them. If nothing can be persisted,
-   print the checkpoint and mark it `not persisted`. Make this the linked current
-   summary, superseding stale labels without deleting history. Include external client
-   IDs, start/stop owners and uncontrolled workers; do not imply cross-client control.
-6. **Verify persistence and continuation.** Reread the written checkpoint and verify its
-   path, HEAD, pending changes and evidence links against the inventory. Report failures
-   as unverified, never claim a durable checkpoint from a write attempt alone. Provide a
-   complete copyable next-chat instruction with repository/path, checkpoint location,
-   candidate branch/SHA/PR, authorized scope and decisions, valid versus pending approvals,
-   evidence, risks/blockers, pending work and one next safe action. Ask the next coordinator
-   to inspect Git drift and approvals before proposing continuation; the checkpoint itself
-   grants no authorization. The user opens the new chat manually.
-7. **Conclude.** Confirm no new execution started and the checkpoint is reachable. Report
-   `stopped` only with runtime confirmation, otherwise `unconfirmed`. The final message must not
-   trigger more tasks or agents.
+
+1. **Freeze & stop:** Stop new execution or delegation. Record controlled workers as `stopped`, `stop requested`, or `unconfirmed`; never claim control over external/uncontrolled sessions.
+2. **Inventory:** Inspect `git status`, branch/HEAD SHA, worktrees, and PR state without destroying or stashing unclear-ownership files. Commit an owned WIP checkpoint on the existing branch only if safe and authorized.
+3. **Write selective state:** Reuse the existing progress file; use `specs/session-handoff.md` only when no other support exists. Include **only current state**:
+   - `STOP REQUESTED — NO AUTO-RESUME`
+   - Authorized scope, branch, HEAD, and PR
+   - Links (never copies) to Issue, PR, SPEC, and evidence
+   - Valid vs pending approvals, checks (`PASS`/`FAIL`/`UNRUN`), blockers, and **one next safe action**
+   - Exclude execution history, obsolete decisions, and rules already in the plugin.
+4. **Verify persistence:** Re-read the written checkpoint to confirm path, HEAD, and links; if unpersisted, mark `not persisted`.
 
 ## Next session and checkpoint retirement
-A new user request (for example orchestrate: "inspect the latest handoff, verify its SHA and
-approvals, report state before proposing continuation") may reopen planning. The checkpoint
-grants **no** permission to resume automatically.
 
-After a new session reads the handoff, verify branch, SHA, PR, Git state, decisions, approvals
-and pending tasks; resolve discrepancies and consolidate durable information into the existing
-progress, decision, specification or evidence documents. Only after a successful restoration:
-
-- remove `specs/session-handoff.md` when it was a temporary checkpoint and its durable content is
-  now represented elsewhere;
-- if the handoff is tracked by Git, remove it in the same task branch/change that consolidates
-  the restoration, never in a standalone PR created only to delete a temporary file; leave no
-  unrelated pending change;
-- if restoration is incomplete, discrepancies remain, or ownership is unclear, **preserve** the
-  handoff and report what is missing;
-- never remove permanent progress, decision, specification or evidence documents.
-
-Report the restoration and whether the handoff was removed or preserved. This cleanup does not
-authorize resuming development; it begins only from a new explicit user request.
-
-## Quota exhaustion
-If quota ran out before handoff could run, nothing was guaranteed. When quota returns, run
-handoff **before** asking to continue: rebuild what Git and worker state can verify and mark
-the rest `unknown`. Interrupt any visibly running task with the client's stop control first.
-
-## Stop conditions
-Stop once the minimum safe, non-destructive consolidation is done, or earlier if access,
-ownership or authorization prevents safe persistence. Never merge, and never bypass QA,
-approvals or security checks by labeling unfinished work complete.
+A checkpoint grants **no** auto-resume authority. On resume, verify Git/PR/approval drift, consolidate durable state into existing progress/Issue/SPEC docs, and remove `specs/session-handoff.md` in the same task branch (never a standalone PR) once consolidated.

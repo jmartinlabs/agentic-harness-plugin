@@ -153,7 +153,7 @@ git -C ~/.local/share/agentic-harness-plugin checkout v1.2.0
 - `agents/` — Claude Code role agents (`functional`, `implementation`, `infrastructure`, `qa-review`).
 - `adapters/opencode/`, `adapters/hermes/` — global per-user adapters for OpenCode and Hermes.
 - `hooks/` — `SessionStart` version banner (`Agentic Harness X.Y.Z`) and Codex usage hooks.
-- `scripts/`, `bin/` — CLI tools (`verify-project.py`, `validate-core`, `work-issue`, `agent-relay`, `check-delegation-route`, `report-agent-usage`, `auto-agent-usage`). In Claude Code, `bin/agentic-*` shims are on `PATH` while enabled; elsewhere run `python3 <plugin-root>/scripts/<tool>`.
+- `scripts/`, `bin/` — CLI tools (`verify-project.py`, `validate-core`, `agent-relay`, `check-delegation-route`, `report-agent-usage`, `auto-agent-usage`). In Claude Code, `bin/agentic-*` shims are on `PATH` while enabled; elsewhere run `python3 <plugin-root>/scripts/<tool>`.
 
 ---
 
