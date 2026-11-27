@@ -11,7 +11,7 @@ La metodología define cuatro perfiles reutilizables, no agentes permanentes ni 
 - **QA / Review:** verificación independiente de conformidad, regresiones y evidencia ([qa-review.md](../../roles/qa-review.md)).
 - **Infrastructure / DevOps:** tareas acotadas de Docker, CI, entorno de datos o preparación de despliegue ([infrastructure.md](../../roles/infrastructure.md)).
 
-El coordinador puede lanzar cero, una o varias tareas con el mismo perfil o definir un rol temporal. Ningún rol reserva Issues ni cambia su estado nativo; esa restricción reside en el coordinador y en cada contrato de rol (aunque [roles/README.md](../../roles/README.md) mencione `AGENTS.md` como referencia del proyecto). En OpenCode existen adaptadores opcionales (`review`, `functional`, `implementation`, `infrastructure`) documentados en la plantilla (`docs/OPENCODE_ADAPTER.md`), no en el plugin.
+El coordinador puede lanzar cero, una o varias tareas con el mismo perfil o definir un rol temporal. Ningún rol reserva Issues ni cambia su estado nativo; esa restricción reside en el coordinador y en cada contrato de rol (aunque [roles/README.md](../../roles/README.md) mencione `AGENTS.md` como referencia del proyecto). En OpenCode existen adaptadores opcionales (`review`, `functional`, `implementation`, `qa`, `infrastructure`) cuyos archivos viven en `adapters/opencode/agents/` del plugin; su documentación completa está en la plantilla (`docs/OPENCODE_ADAPTER.md`).
 
 ## El work packet
 
