@@ -38,9 +38,11 @@ class HarnessCase(unittest.TestCase):
         text = config if isinstance(config, str) else json.dumps(config)
         (self.root / ".agents" / "harnesses" / name).write_text(text)
 
-    def assertHarnessError(self):
+    def assertHarnessError(self, expected=None):
         errors = check_project(self.root)
         self.assertTrue(any(e.startswith("harness-config:") for e in errors), errors)
+        if expected is not None:
+            self.assertTrue(any(expected in e for e in errors), (expected, errors))
 
     def test_valid_file_has_no_problems(self):
         self.assertEqual(check_project(self.root), [])
@@ -205,6 +207,14 @@ class HarnessCase(unittest.TestCase):
         self.write(local, "t3.local.json")
         self.assertEqual(check_project(self.root), [])
 
+        for local_defaults in (
+            {"provider": "antigravity", "model": "gemini-4-hydrogen"},
+            {"provider": "antigravity", "model": "gemini-4-hydrogen", "effort": "medium"},
+        ):
+            with self.subTest(local_defaults=local_defaults):
+                self.write({"version": 2, "local": local_defaults}, "t3.local.json")
+                self.assertEqual(check_project(self.root), [])
+
     def test_t3_host_config_rejects_invalid_schemas_and_paths(self):
         base = {
             "version": 2,
@@ -218,28 +228,38 @@ class HarnessCase(unittest.TestCase):
             },
         }
         invalid_cases = [
-            lambda c: c.update(version=1),
-            lambda c: c.update(version=2.0),
-            lambda c: c.update(external={}),
-            lambda c: c["local"].update(unknown="x"),
-            lambda c: c["local"].pop("model"),
-            lambda c: c["local"].pop("provider"),
-            lambda c: c["local"].update(provider="1bad"),
-            lambda c: c["local"].update(provider="bad provider"),
-            lambda c: c["local"]["profiles"].update({"unknown-role": {"provider": "codex", "model": "m"}}),
-            lambda c: c["local"]["profiles"].update({"review": {"standard": {"provider": "codex", "model": "m"}}}),
-            lambda c: c["local"]["profiles"].update({"qa-review": {"provider": "opencode"}}),
-            lambda c: c["local"]["profiles"].update({"qa-review": {"model": "glm-5.3"}}),
-            lambda c: c["local"]["profiles"].update({"qa-review": {"provider": "opencode", "model": ""}}),
-            lambda c: c["local"]["profiles"].update({"qa-review": {"provider": "", "model": "glm-5.3"}}),
-            lambda c: c["local"]["profiles"].update({"qa-review": {"urgent": {"provider": "opencode", "model": "m"}}}),
+            (lambda c: c.update(version=1), "version must be integer 2"),
+            (lambda c: c.update(version=2.0), "version must be integer 2"),
+            (lambda c: c.update(external={}), "config: unknown field external"),
+            (lambda c: c["local"].update(unknown="x"), "local: unknown field unknown"),
+            (lambda c: c["local"].pop("model"), "local: provider and model are required when setting defaults"),
+            (lambda c: c["local"].pop("provider"), "local: provider and model are required when setting defaults"),
+            (lambda c: c.update(local={"effort": "low"}), "local: provider and model are required when setting defaults"),
+            (lambda c: c.update(local={"provider": "antigravity"}), "local: provider and model are required when setting defaults"),
+            (lambda c: c.update(local={"model": "gemini-4-hydrogen"}), "local: provider and model are required when setting defaults"),
+            (lambda c: c["local"].update(provider="1bad"), "local.provider: must match"),
+            (lambda c: c["local"].update(provider="bad provider"), "local.provider: must match"),
+            (lambda c: c["local"]["profiles"].update({"unknown-role": {"provider": "codex", "model": "m"}}),
+             "local.profiles: unknown field unknown-role"),
+            (lambda c: c["local"]["profiles"].update({"review": {"standard": {"provider": "codex", "model": "m"}}}),
+             "local.profiles.review: unknown field standard"),
+            (lambda c: c["local"]["profiles"].update({"qa-review": {"provider": "opencode"}}),
+             "local.profiles.qa-review: provider and model are required"),
+            (lambda c: c["local"]["profiles"].update({"qa-review": {"model": "glm-5.3"}}),
+             "local.profiles.qa-review: provider and model are required"),
+            (lambda c: c["local"]["profiles"].update({"qa-review": {"provider": "opencode", "model": ""}}),
+             "local.profiles.qa-review.model: must be null or a non-empty string"),
+            (lambda c: c["local"]["profiles"].update({"qa-review": {"provider": "", "model": "glm-5.3"}}),
+             "local.profiles.qa-review.provider: must match"),
+            (lambda c: c["local"]["profiles"].update({"qa-review": {"urgent": {"provider": "opencode", "model": "m"}}}),
+             "local.profiles.qa-review: unknown field urgent"),
         ]
-        for index, mutate in enumerate(invalid_cases):
-            with self.subTest(case=index):
+        for index, (mutate, expected) in enumerate(invalid_cases):
+            with self.subTest(case=index, expected=expected):
                 config = copy(base)
                 mutate(config)
                 self.write(config, "t3.json")
-                self.assertHarnessError()
+                self.assertHarnessError(expected)
 
         outside = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
         self.addCleanup(Path(outside.name).unlink)
@@ -247,7 +267,7 @@ class HarnessCase(unittest.TestCase):
         outside.close()
         (self.root / ".agents" / "harnesses" / "t3.json").unlink()
         (self.root / ".agents" / "harnesses" / "t3.json").symlink_to(outside.name)
-        self.assertHarnessError()
+        self.assertHarnessError("invalid host file: t3.json")
 
     def test_cli_harness_file_validates_only_target_file(self):
         self.write("{not json", "claude.json")
@@ -274,6 +294,44 @@ class HarnessCase(unittest.TestCase):
         )
         self.assertEqual(missing.returncode, 1)
         self.assertIn("harness-config:", missing.stdout)
+
+        no_project = subprocess.run(
+            [sys.executable, str(SCRIPT), "--harness-file", str(self.root / ".agents" / "harnesses" / "t3.json")],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(no_project.returncode, 2)
+        self.assertIn("--harness-file requires --project", no_project.stderr)
+
+        outside = tempfile.NamedTemporaryFile("w", suffix=".json", prefix="t3-", delete=False)
+        self.addCleanup(Path(outside.name).unlink)
+        outside.write('{"version":2}')
+        outside.close()
+        outside_abs = subprocess.run(
+            [sys.executable, str(SCRIPT), "--project", str(self.root), "--harness-file", outside.name],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(outside_abs.returncode, 1)
+        self.assertIn("harness-config: invalid coordinator filename:", outside_abs.stdout)
+
+        outside_named_dir = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, outside_named_dir)
+        outside_t3 = outside_named_dir / "t3.json"
+        outside_t3.write_text('{"version":2}')
+        outside_host = subprocess.run(
+            [sys.executable, str(SCRIPT), "--project", str(self.root), "--harness-file", str(outside_t3)],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(outside_host.returncode, 1)
+        self.assertIn("harness-config: invalid host file: t3.json", outside_host.stdout)
+
+        (self.root / ".agents" / "harnesses" / "t3.json").unlink()
+        (self.root / ".agents" / "harnesses" / "t3.json").symlink_to(outside_t3)
+        symlink_escape = subprocess.run(
+            [sys.executable, str(SCRIPT), "--project", str(self.root), "--harness-file", ".agents/harnesses/t3.json"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(symlink_escape.returncode, 1)
+        self.assertIn("harness-config: invalid host file: t3.json", symlink_escape.stdout)
 
 
 class PluginCase(unittest.TestCase):

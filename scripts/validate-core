@@ -3,7 +3,7 @@
 
   validate-core                           validate the plugin this script belongs to
   validate-core --project DIR             validate DIR/.agents/harnesses/*.json (harness JSON v2)
-  validate-core --harness-file PATH       validate a single host or coordinator harness JSON v2 file
+  validate-core --project DIR --harness-file PATH  validate a single host or coordinator harness JSON v2 file
 
 Read-only and offline: stdlib only, writes nothing. Exit 0 with no problems, 1 with problems
 (`rule: message` lines on stdout), 2 on bad usage.
@@ -88,11 +88,12 @@ def _host_selection(value, location, problems, *, required):
     if provider is not None and not (isinstance(provider, str) and PROVIDER_PATTERN.fullmatch(provider)):
         problems.append(f"{location}.provider: must match {PROVIDER_PATTERN.pattern}")
     model = value.get("model")
+    effort = value.get("effort")
     if required:
         if provider is None or model is None:
             problems.append(f"{location}: provider and model are required")
-    elif (provider is None) != (model is None):
-        problems.append(f"{location}: provider and model must be set together")
+    elif (provider is not None or model is not None or effort is not None) and (provider is None or model is None):
+        problems.append(f"{location}: provider and model are required when setting defaults")
 
 
 def check_harness(config, coordinator):
@@ -595,19 +596,14 @@ def main(argv=None):
     parser.add_argument("--root", type=Path, default=PLUGIN_ROOT, help="plugin root (default: this plugin)")
     args = parser.parse_args(argv)
     if args.harness_file is not None:
-        if args.project is not None:
-            if not args.project.is_dir():
-                print(f"Not validated: {args.project} is not a directory", file=sys.stderr)
-                return 2
-            project = args.project.resolve()
-            target = (args.harness_file if args.harness_file.is_absolute()
-                      else (project / args.harness_file if (project / args.harness_file).exists() or not args.harness_file.exists()
-                            else args.harness_file))
-        else:
-            target = args.harness_file
-            parent = target.resolve().parent if target.exists() else target.parent.resolve()
-            project = (parent.parent.parent if parent.name == "harnesses" and parent.parent.name == ".agents"
-                       else parent).resolve()
+        if args.project is None:
+            print("Not validated: --harness-file requires --project", file=sys.stderr)
+            return 2
+        if not args.project.is_dir():
+            print(f"Not validated: {args.project} is not a directory", file=sys.stderr)
+            return 2
+        project = args.project.resolve()
+        target = args.harness_file if args.harness_file.is_absolute() else (project / args.harness_file)
         errors = check_harness_file(target, project)
         report = f"harness files checked: {target.name}"
     elif args.project is not None:

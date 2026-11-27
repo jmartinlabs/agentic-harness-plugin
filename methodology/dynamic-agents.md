@@ -112,9 +112,10 @@ distinct from any native T3 root `t3.json`. Always read from the single main pro
 never from a worker's worktree.
 
 - **Local exclusivity:** if `t3.local.json` exists, it is the sole active file; otherwise
-  `t3.json` is active. There is no cross-file merging or inheritance: a role missing from the
-  active file is unconfigured and stops dispatch rather than falling back to the other file or
-  native inheritance. Before `t3.json` exists, native delegation is the bootstrap exception.
+  `t3.json` is active. There is no cross-file merging or inheritance: a role with neither a
+  matching profile nor same-file defaults is unconfigured and stops dispatch; never fall back to
+  the other file or native inheritance. Before `t3.json` exists, native delegation is the
+  bootstrap exception.
 - **On-demand read and active-file validation:** read the active file on demand before each
   dispatch (no startup cache, so edits or removing `t3.local.json` take effect on the next
   dispatch without restarting). Validate only the active file before dispatch with
@@ -125,7 +126,13 @@ never from a worker's worktree.
   optional), (2) matching `local.profiles.<role>` (either a single `{provider, model, effort}`
   selection or `{standard, complex}`; `review` allows single selection only and reuses
   [QA/Review](../roles/qa-review.md)), (3) same-file `local.provider`/`model`/`effort`
-  defaults, (4) stop dispatch. Never substitute another provider, model, or paid API/credits.
+  defaults (which apply to every role without a profile, and require `provider` and `model`
+  together with `effort` optional), (4) stop dispatch. Never substitute another provider, model,
+  or paid API/credits.
+- **Host catalogue check and effort mapping:** before dispatch, verify the resolved route against
+  the host catalogue (provider enabled, model listed, effort value supported); map canonical
+  `effort` to the native option (OpenCode `variant`, Antigravity `thought_level`, Codex
+  `reasoningEffort`). A missing or unsupported route stops dispatch.
 - **Requested vs. observed:** record requested `provider`, `model`, and `effort` before
   dispatch and compare with observed execution metadata afterwards (distinct identity = `FAIL`,
   missing metadata = `UNVERIFIED`; worker self-report is not evidence).
