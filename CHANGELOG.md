@@ -2,6 +2,15 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/), see [RELEASING.md](RELEASING.md).
 
+## [2.2.2] - 2026-11-27
+
+### Added
+- Guía de usuario en `docs/guia/`: Parte 0, Partes I–XII y Apéndices A–I en español, con enlace al dueño canónico en cada capítulo y fuera del contexto de los agentes (#62, PR #67).
+- Enlace a la guía de usuario desde el `README.md` principal (#62).
+
+### Changed
+- Eficiencia de contexto del coordinador: evaluación proactiva de renovación antes del siguiente bloque tras un hito, con ~150k como aviso y ~200k como objetivo blando mientras T3 no exponga `contextUsage`; salidas de herramientas acotadas filtrando en origen y con lecturas parciales (#61, PR #66).
+
 ## [2.2.1] - 2026-11-27
 
 ### Changed
