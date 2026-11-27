@@ -126,7 +126,7 @@ class PathTests(unittest.TestCase):
 
 
 class HookTests(unittest.TestCase):
-    def test_session_start_reports_the_artifact_version_and_preserves_claude_context(self):
+    def test_session_start_reports_the_artifact_version_without_injecting_policy(self):
         version = json.loads((ROOT / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))["version"]
         script = ROOT / "hooks/session-start.py"
         for arguments in ([], ["--claude"]):
@@ -137,14 +137,7 @@ class HookTests(unittest.TestCase):
                 )
                 report = json.loads(result.stdout)
                 self.assertEqual(report["systemMessage"], f"Agentic Harness {version}")
-                if arguments:
-                    output = report["hookSpecificOutput"]
-                    self.assertEqual(output["hookEventName"], "SessionStart")
-                    context = output["additionalContext"]
-                    self.assertEqual(context, (ROOT / "skills/orchestrate/SKILL.md").read_text(encoding="utf-8"))
-                    self.assertLessEqual(len(context.encode("utf-8")), HOOK_PRINT_BUDGET)
-                else:
-                    self.assertEqual(list(report), ["systemMessage"])
+                self.assertEqual(list(report), ["systemMessage"])
 
     def test_codex_hooks_wire_session_start_and_auto_agent_usage(self):
         config = json.loads((ROOT / "hooks/codex.json").read_text(encoding="utf-8"))
