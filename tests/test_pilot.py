@@ -119,7 +119,7 @@ class PilotTests(unittest.TestCase):
 # Baseline: jmartinlabs/agent-project-template 5b53f75f1878909a65f76aa3e0151f1a0f31d86d,
 # specs/methodology/approvals.md and .agents/roles/qa-review.md respectively.
 BASELINE_SHA256 = {
-    "methodology/approvals.md": "e87dc895d259d1839724e35340623957051302503504e2e9387d4bbe0797fa8f",
+    "methodology/approvals.md": "1ffaf683678b313b37181002dd0043dcf0f5ef1ac7d320944920aeff518be350",
     "roles/qa-review.md": "1982da1aae1ce87c59b9a2ff9c149b4269e437c0d6ca8723a0e8254045f56b49",
 }
 

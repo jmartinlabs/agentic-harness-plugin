@@ -93,9 +93,10 @@ using the active host configuration (`.agents/harnesses/t3.local.json` or
 Standalone clients (`claude`, `codex`, `opencode`, `hermes`) are unchanged and never read `t3.json`
 or `t3.local.json`.
 
-- **Coordinator and worker isolation:** the coordinator stays in the T3 workspace; writing workers
-  run in isolated worktrees (`isolation: "worktree"`). Host configuration is always read from the
-  main project root, never from a worker worktree.
+- **Coordinator and worker isolation:** follow
+  [coordinator main checkout](dynamic-agents.md#coordinator-main-checkout) for main-checkout state
+  and isolation (`isolation: "worktree"` for writing workers). Host configuration is always read
+  from the main project root, never from a worker worktree.
 - **Fresh context and autonomous renewal:** `delegate_task` uses fresh context by default. The
   coordinator may renew its own context autonomously via `freshContext` with a compact selective
   handoff at safe points, without expanding authorizations or bypassing approval/QA/merge gates.
