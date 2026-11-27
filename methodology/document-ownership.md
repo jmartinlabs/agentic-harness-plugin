@@ -36,3 +36,5 @@ processes; the initialization walkthrough coordinates the first four steps.
 Mixed-client work reuses the [work packet](../templates/agent-work-packet.md) and
 [coordination contract](dynamic-agents.md). A current summary in the Issue
 or in existing progress/setup documents owns operational state; other documents link it.
+
+Guideline line ranges (advisory only, no validators): parent Issue 15–30, simple Issue 10–25, sub-issue 10–20, PR 15–30, comment 3–10, worker return 15–30, handoff 20–40; SPEC and research scale with complexity.
