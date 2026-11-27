@@ -2,7 +2,7 @@
 
 The `agentic` plugin supplies shared skills, roles, methodology, templates and tools from one marketplace, `agentic-harness`. Each project keeps its own rules (`specs/project-rules.md`), v2 harness configuration (`.agents/harnesses/<coordinator>.json`) and application files.
 
-- **Current stable release:** `v1.2.2` (tracking the `stable` channel).
+- **Current stable release:** [latest stable release](https://github.com/jmartinlabs/agentic-harness-plugin/releases/latest) (tracking the `stable` channel).
 - **Requirements:** Python 3.10+ for hooks, readiness diagnostics and CLI tools.
 
 ---
