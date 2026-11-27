@@ -2,6 +2,15 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/), see [RELEASING.md](RELEASING.md).
 
+## [2.2.0] - 2026-11-27
+
+### Added
+- Coordinator main checkout policy: configured base branch vs default branch, optional host auto-pull, safe fast-forward after authorized merge, and preservation of local changes (#51, PR #52).
+- Native PR Watch (link/watch once, consolidated read on wakeup, unwatch at completion, no polling and no auto-merge) and 5 vs 5 measurement method (#50, PR #53).
+
+### Changed
+- Simplified `skills/orchestrate/SKILL.md` from 8702 to 6495 bytes while preserving behavior, with standalone/T3 separation and Stop conditions (#54, #55, PR #56).
+
 ## [2.1.0] - 2026-11-27
 
 ### Added
