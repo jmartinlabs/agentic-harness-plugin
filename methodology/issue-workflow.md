@@ -12,7 +12,7 @@ Native GitHub workflow for authorized work in Issues, extending [adaptive workfl
   - Reopening a ready PR forces `In review`: do not close/reopen PRs during ordinary fixes.
   - Submitting a review does not change status; returning to `Todo` is manual.
   - Merge to default branch → `Done` and close; on `test`, use `Refs #N` and close after promotion/acceptance. Reopen → `Backlog`; unplanned → `Not planned`.
-- **Fallback:** If `planning-statuses` return 404 or are unavailable, **stop** and require explicit human authorization; never invent local states.
+- **Fallback & unset status:** Preflight `planning-statuses` (200) before listing; if 404 or unavailable, **stop** and require explicit human authorization (do not list, infer an empty queue, or invent local states). Open Issues with `status=null` are unset: report them as unset rather than concluding the queue is empty.
 
 ## Adaptive issue structure
 
