@@ -633,6 +633,65 @@ class UpdateAgenticTests(unittest.TestCase):
                     exit_code = main(["--check"])
                 self.assertEqual(exit_code, 0)
 
+    def test_hermes_cyclic_symlink_in_main_skills_is_ignored_in_check_and_update(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            shared_repo = home / ".local" / "share" / "agentic-harness-plugin"
+            hermes_home = home / ".hermes"
+            _setup_shared_harnesses(home, shared_repo, version="1.2.2")
+
+            # 'loop' sorts before 'verify-project', exercising the loop before the valid link
+            (hermes_home / "skills" / "loop").symlink_to("loop")
+
+            before_tree = sorted(str(p.relative_to(hermes_home)) for p in hermes_home.rglob("*"))
+
+            def fake_runner(cmd, cwd, timeout):
+                if cmd[0] == "git":
+                    if cmd[3:6] == ["rev-parse", "--abbrev-ref", "HEAD"]:
+                        return CommandResult(0, "stable\n")
+                    if cmd[3:6] == ["remote", "get-url", "origin"]:
+                        return CommandResult(0, VALID_ORIGIN + "\n")
+                    if cmd[3:5] == ["rev-parse", "HEAD"]:
+                        return CommandResult(0, "aaaa111\n")
+                    if cmd[3:7] == ["pull", "--ff-only", "origin", "stable"]:
+                        return CommandResult(0, "Already up to date.\n")
+                raise AssertionError(f"Unexpected command: {cmd}")
+
+            with mock.patch.dict(
+                "os.environ",
+                {"HOME": str(home), "AGENTIC_SHARED_REPO": str(shared_repo), "HERMES_HOME": str(hermes_home)},
+                clear=True,
+            ), mock.patch.object(MOD["shutil"], "which", return_value=None):
+                check_results = run_all(
+                    check_only=True,
+                    home=home,
+                    env={"AGENTIC_SHARED_REPO": str(shared_repo), "HERMES_HOME": str(hermes_home)},
+                    runner=lambda *_: (_ for _ in ()).throw(AssertionError("unexpected call")),
+                    which=lambda _name: None,
+                )
+                check_by_name = {r.harness: r for r in check_results}
+                self.assertEqual(check_by_name["hermes"].status, "installed")
+                self.assertEqual(check_by_name["hermes"].version_before, "1.2.2")
+
+                with mock.patch("builtins.print"):
+                    exit_code = main(["--check"])
+                self.assertEqual(exit_code, 0)
+
+                after_check_tree = sorted(str(p.relative_to(hermes_home)) for p in hermes_home.rglob("*"))
+                self.assertEqual(before_tree, after_check_tree)
+
+                update_results = run_all(
+                    check_only=False,
+                    home=home,
+                    env={"AGENTIC_SHARED_REPO": str(shared_repo), "HERMES_HOME": str(hermes_home)},
+                    runner=fake_runner,
+                    which=lambda _name: None,
+                )
+                update_by_name = {r.harness: r for r in update_results}
+                self.assertEqual(update_by_name["hermes"].status, "up-to-date")
+                self.assertEqual(update_by_name["hermes"].version_before, "1.2.2")
+                self.assertEqual(update_by_name["hermes"].version_after, "1.2.2")
+
 
 if __name__ == "__main__":
     unittest.main()
