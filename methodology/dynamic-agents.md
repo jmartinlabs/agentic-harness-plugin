@@ -103,6 +103,36 @@ For Codex, explicit overrides need fresh bounded context and an attributable chi
 record with both fields. These are verification candidates. This template ships no verified
 native profile route. Record the tested client surface and version before documenting support.
 
+### Host worker configuration
+
+When a host orchestrator (such as T3) dispatches workers across multiple providers, it reads
+`.agents/harnesses/t3.json` (versioned) or `.agents/harnesses/t3.local.json` (optional,
+gitignored, editable without PR). Host configuration lives only under `.agents/harnesses/`,
+distinct from any native T3 root `t3.json`. Always read from the single main project root,
+never from a worker's worktree.
+
+- **Local exclusivity:** if `t3.local.json` exists, it is the sole active file; otherwise
+  `t3.json` is active. There is no cross-file merging or inheritance: a role missing from the
+  active file is unconfigured and stops dispatch rather than falling back to the other file or
+  native inheritance. Before `t3.json` exists, native delegation is the bootstrap exception.
+- **On-demand read and active-file validation:** read the active file on demand before each
+  dispatch (no startup cache, so edits or removing `t3.local.json` take effect on the next
+  dispatch without restarting). Validate only the active file before dispatch with
+  `validate-core --project <project> --harness-file <active-file>`; an invalid active file
+  returns exit 1 and stops dispatch. CI validates versioned files with `validate-core --project`.
+- **Atomic precedence and no substitution:** resolve worker selection atomically in order:
+  (1) explicit owner selection for the task (must name both `provider` and `model`; `effort`
+  optional), (2) matching `local.profiles.<role>` (either a single `{provider, model, effort}`
+  selection or `{standard, complex}`; `review` allows single selection only and reuses
+  [QA/Review](../roles/qa-review.md)), (3) same-file `local.provider`/`model`/`effort`
+  defaults, (4) stop dispatch. Never substitute another provider, model, or paid API/credits.
+- **Requested vs. observed:** record requested `provider`, `model`, and `effort` before
+  dispatch and compare with observed execution metadata afterwards (distinct identity = `FAIL`,
+  missing metadata = `UNVERIFIED`; worker self-report is not evidence).
+- **Autonomous context renewal:** the coordinator may renew its own context autonomously with
+  `freshContext` and a compact selective handoff at safe points while respecting all
+  authorizations and approval gates; workers keep their own session while useful.
+
 ## Models and background work
 
 The core states the model and limit gates (steps 3–4). Detail: model choice never replaces verification,

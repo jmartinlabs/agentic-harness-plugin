@@ -168,6 +168,113 @@ class HarnessCase(unittest.TestCase):
                                  capture_output=True, text=True)
         self.assertEqual(missing.returncode, 2)
 
+    def test_t3_host_config_valid_versioned_local_and_profiles(self):
+        versioned = {
+            "version": 2,
+            "local": {
+                "provider": "antigravity",
+                "model": "gemini-4-hydrogen",
+                "effort": "medium",
+                "profiles": {
+                    "qa-review": {"provider": "opencode", "model": "alibaba-token-plan/glm-5.3", "effort": "low"},
+                    "review": {"provider": "codex", "model": "gpt-6.1-terra", "effort": "low"},
+                },
+            },
+        }
+        self.write(versioned, "t3.json")
+        self.assertEqual(check_project(self.root), [])
+
+        local = {
+            "version": 2,
+            "local": {
+                "profiles": {
+                    "functional": {"provider": "antigravity", "model": "gemini-4-hydrogen"},
+                    "implementation": {
+                        "standard": {"provider": "antigravity", "model": "gemini-4-hydrogen", "effort": "medium"},
+                        "complex": {"provider": "codex", "model": "gpt-6.1-terra", "effort": "high"},
+                    },
+                    "qa-review": {
+                        "standard": {"provider": "opencode", "model": "alibaba-token-plan/deepseek-v4.1-flash-1017", "effort": "low"},
+                        "complex": {"provider": "opencode", "model": "alibaba-token-plan/glm-5.3"},
+                    },
+                    "infrastructure": {"provider": "antigravity", "model": "gemini-4-hydrogen", "effort": "low"},
+                    "review": {"provider": "codex", "model": "gpt-6.1-terra"},
+                },
+            },
+        }
+        self.write(local, "t3.local.json")
+        self.assertEqual(check_project(self.root), [])
+
+    def test_t3_host_config_rejects_invalid_schemas_and_paths(self):
+        base = {
+            "version": 2,
+            "local": {
+                "provider": "antigravity",
+                "model": "gemini-4-hydrogen",
+                "effort": "medium",
+                "profiles": {
+                    "qa-review": {"provider": "opencode", "model": "alibaba-token-plan/glm-5.3", "effort": "low"},
+                },
+            },
+        }
+        invalid_cases = [
+            lambda c: c.update(version=1),
+            lambda c: c.update(version=2.0),
+            lambda c: c.update(external={}),
+            lambda c: c["local"].update(unknown="x"),
+            lambda c: c["local"].pop("model"),
+            lambda c: c["local"].pop("provider"),
+            lambda c: c["local"].update(provider="1bad"),
+            lambda c: c["local"].update(provider="bad provider"),
+            lambda c: c["local"]["profiles"].update({"unknown-role": {"provider": "codex", "model": "m"}}),
+            lambda c: c["local"]["profiles"].update({"review": {"standard": {"provider": "codex", "model": "m"}}}),
+            lambda c: c["local"]["profiles"].update({"qa-review": {"provider": "opencode"}}),
+            lambda c: c["local"]["profiles"].update({"qa-review": {"model": "glm-5.3"}}),
+            lambda c: c["local"]["profiles"].update({"qa-review": {"provider": "opencode", "model": ""}}),
+            lambda c: c["local"]["profiles"].update({"qa-review": {"provider": "", "model": "glm-5.3"}}),
+            lambda c: c["local"]["profiles"].update({"qa-review": {"urgent": {"provider": "opencode", "model": "m"}}}),
+        ]
+        for index, mutate in enumerate(invalid_cases):
+            with self.subTest(case=index):
+                config = copy(base)
+                mutate(config)
+                self.write(config, "t3.json")
+                self.assertHarnessError()
+
+        outside = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+        self.addCleanup(Path(outside.name).unlink)
+        outside.write('{"version":2}')
+        outside.close()
+        (self.root / ".agents" / "harnesses" / "t3.json").unlink()
+        (self.root / ".agents" / "harnesses" / "t3.json").symlink_to(outside.name)
+        self.assertHarnessError()
+
+    def test_cli_harness_file_validates_only_target_file(self):
+        self.write("{not json", "claude.json")
+        self.write({"version": 2, "local": {"provider": "antigravity", "model": "gemini-4-hydrogen"}}, "t3.json")
+        ok = subprocess.run(
+            [sys.executable, str(SCRIPT), "--project", str(self.root), "--harness-file", ".agents/harnesses/t3.json"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(ok.returncode, 0, ok.stdout)
+        self.assertIn("t3.json", ok.stdout)
+
+        bad_local = {"version": 2, "local": {"profiles": {"review": {"standard": {"provider": "codex", "model": "m"}}}}}
+        self.write(bad_local, "t3.local.json")
+        bad = subprocess.run(
+            [sys.executable, str(SCRIPT), "--project", str(self.root), "--harness-file", ".agents/harnesses/t3.local.json"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(bad.returncode, 1)
+        self.assertIn("harness-config: t3.local.json:", bad.stdout)
+
+        missing = subprocess.run(
+            [sys.executable, str(SCRIPT), "--project", str(self.root), "--harness-file", ".agents/harnesses/missing.json"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(missing.returncode, 1)
+        self.assertIn("harness-config:", missing.stdout)
+
 
 class PluginCase(unittest.TestCase):
     def fixture(self):
