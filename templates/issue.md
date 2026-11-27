@@ -34,7 +34,7 @@ produce several executable Issues; link the parent epic or roadmap row when it e
 
 ## Dependencies
 
-Native `blocked_by` dependencies (or blocking sub-issues), or `None`. A dependency is satisfied when its status is `Done`, `Not planned`, or `Duplicate`; `Backlog`, `Todo`, `In progress`, and `In review` block.
+Native `blocked_by` dependencies (or blocking sub-issues), or `None`. A dependency is satisfied only when `Done`; `Not planned` and `Duplicate` (plus `Backlog`, `Todo`, `In progress`, `In review`) do not unblock (remove `blocked_by` if no longer needed, or fix the reference if duplicated).
 
 ## Authorization and evidence
 
