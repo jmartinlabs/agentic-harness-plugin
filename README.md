@@ -65,6 +65,10 @@ Hermes loads skills natively at user scope. Clone `stable` once per user and sym
 
 ---
 
+## User guide
+
+Guía de usuario completa, en español: [docs/guia/README.md](docs/guia/README.md). Cubre instalación, adopción, Issues, autorizaciones, coordinación, QA, Git, PR Watch, contexto, consumo y resolución de problemas.
+
 ## Update and roll back
 
 ### Update
