@@ -6,7 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ### Added
 - T3 host worker configuration schema (`t3.json` / `t3.local.json`), `--harness-file` single-file validation in `scripts/validate-core`, and initial `.agents/harnesses/t3.json` for this repository (#42, #45).
-- Documentation for T3 host worker configuration, local exclusivity, atomic precedence, requested/observed metadata in `templates/agent-work-packet.md`, and autonomous coordinator context renewal (#42, #45).
+- Documentation for T3 host worker configuration, local exclusivity, atomic precedence, unsupported-effort `UNVERIFIED` fallback (keeping provider/model exact), requested/observed metadata in `templates/agent-work-packet.md`, and autonomous coordinator context renewal (#42, #45).
 
 ## [2.0.0] - 2026-11-27
 

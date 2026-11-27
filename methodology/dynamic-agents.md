@@ -132,10 +132,14 @@ never from a worker's worktree.
 - **Host catalogue check and effort mapping:** before dispatch, verify the resolved route against
   the host catalogue (provider enabled, model listed, effort value supported); map canonical
   `effort` to the native option (OpenCode `variant`, Antigravity `thought_level`, Codex
-  `reasoningEffort`). A missing or unsupported route stops dispatch.
+  `reasoningEffort`). An unavailable or unsupported provider or model stops dispatch; never change
+  or substitute them. If provider and model are available but the requested effort is not exposed or
+  supported (standing authorization for Antigravity Hydrogen when `medium` is unsupported, with no
+  repeated approval), dispatch without the native effort option, keep provider and model exact,
+  and record requested `effort`, observed `not exposed`, and verdict `UNVERIFIED`.
 - **Requested vs. observed:** record requested `provider`, `model`, and `effort` before
   dispatch and compare with observed execution metadata afterwards (distinct identity = `FAIL`,
-  missing metadata = `UNVERIFIED`; worker self-report is not evidence).
+  missing metadata or unexposed effort = `UNVERIFIED`; worker self-report is not evidence).
 - **Autonomous context renewal:** the coordinator may renew its own context autonomously with
   `freshContext` and a compact selective handoff at safe points while respecting all
   authorizations and approval gates; workers keep their own session while useful.
