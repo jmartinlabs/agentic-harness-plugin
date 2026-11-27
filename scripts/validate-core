@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """validate-core: integrity validator for the agentic plugin and for a project's harness files.
 
-  validate-core                      validate the plugin this script belongs to
-  validate-core --project DIR        validate DIR/.agents/harnesses/*.json (harness JSON v2)
+  validate-core                           validate the plugin this script belongs to
+  validate-core --project DIR             validate DIR/.agents/harnesses/*.json (harness JSON v2)
+  validate-core --project DIR --harness-file PATH  validate a single host or coordinator harness JSON v2 file
 
 Read-only and offline: stdlib only, writes nothing. Exit 0 with no problems, 1 with problems
 (`rule: message` lines on stdout), 2 on bad usage.
@@ -37,6 +38,9 @@ CATALOGUE_DOCS = ("methodology/issue-workflow.md", "skills/work-issue/SKILL.md",
 
 # --- Harness JSON v2 (ported from the template validator `check_harness`) -------------------
 CANONICAL_ROLES = ("functional", "implementation", "qa-review", "infrastructure")
+HOST_ROLES = CANONICAL_ROLES + ("review",)
+HOST_FILENAMES = ("t3.json", "t3.local.json")
+PROVIDER_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
 EXTERNAL_TASKS = ("review", "investigate", "develop")
 EXTERNAL_MODES = ("automatic", "on_request", "disabled")
 EXTERNAL_TRANSPORTS = ("cli",)
@@ -62,46 +66,61 @@ def load_json(path):
                       parse_constant=reject_json_constant)
 
 
+def _fields(value, allowed, location, problems):
+    if not isinstance(value, dict):
+        problems.append(f"{location}: must be an object")
+        return False
+    for key in sorted(value.keys() - set(allowed)):
+        problems.append(f"{location}: unknown field {key}")
+    return True
+
+
+def _selection(value, location, problems):
+    for key in ("model", "effort"):
+        setting = value.get(key)
+        if setting is not None and not (isinstance(setting, str) and setting.strip()):
+            problems.append(f"{location}.{key}: must be null or a non-empty string")
+
+
+def _host_selection(value, location, problems, *, required):
+    _selection(value, location, problems)
+    provider = value.get("provider")
+    if provider is not None and not (isinstance(provider, str) and PROVIDER_PATTERN.fullmatch(provider)):
+        problems.append(f"{location}.provider: must match {PROVIDER_PATTERN.pattern}")
+    model = value.get("model")
+    effort = value.get("effort")
+    if required:
+        if provider is None or model is None:
+            problems.append(f"{location}: provider and model are required")
+    elif (provider is not None or model is not None or effort is not None) and (provider is None or model is None):
+        problems.append(f"{location}: provider and model are required when setting defaults")
+
+
 def check_harness(config, coordinator):
     problems = []
-
-    def fields(value, allowed, location):
-        if not isinstance(value, dict):
-            problems.append(f"{location}: must be an object")
-            return False
-        for key in sorted(value.keys() - set(allowed)):
-            problems.append(f"{location}: unknown field {key}")
-        return True
-
-    def selection(value, location):
-        for key in ("model", "effort"):
-            setting = value.get(key)
-            if setting is not None and not (isinstance(setting, str) and setting.strip()):
-                problems.append(f"{location}.{key}: must be null or a non-empty string")
-
-    if not fields(config, ("version", "local", "external"), "config"):
+    if not _fields(config, ("version", "local", "external"), "config", problems):
         return problems
     if type(config.get("version")) is not int or config["version"] != 2:
         problems.append("version must be integer 2")
     local = config.get("local", {})
-    if fields(local, ("model", "effort", "profiles"), "local"):
-        selection(local, "local")
+    if _fields(local, ("model", "effort", "profiles"), "local", problems):
+        _selection(local, "local", problems)
         profiles = local.get("profiles", {})
-        if fields(profiles, CANONICAL_ROLES, "local.profiles"):
+        if _fields(profiles, CANONICAL_ROLES, "local.profiles", problems):
             for role in CANONICAL_ROLES:
                 if role not in profiles:
                     continue
                 levels = profiles[role]
                 location = f"local.profiles.{role}"
-                if not fields(levels, ("standard", "complex"), location):
+                if not _fields(levels, ("standard", "complex"), location, problems):
                     continue
                 for name in ("standard", "complex"):
                     if name not in levels:
                         continue
                     profile = levels[name]
                     level = f"{location}.{name}"
-                    if fields(profile, ("model", "effort"), level):
-                        selection(profile, level)
+                    if _fields(profile, ("model", "effort"), level, problems):
+                        _selection(profile, level, problems)
                         if all(profile.get(key) is None for key in ("model", "effort")):
                             problems.append(f"{level}: must set model or effort")
 
@@ -112,15 +131,15 @@ def check_harness(config, coordinator):
         location = f"external.{client}"
         if not re.fullmatch(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)*", client):
             problems.append(f"{location}: invalid client name")
-        if not fields(entry, ("enabled", "transport", "model", "effort", "tasks"), location):
+        if not _fields(entry, ("enabled", "transport", "model", "effort", "tasks"), location, problems):
             continue
         if not isinstance(entry.get("enabled"), bool):
             problems.append(f"{location}.enabled: must be boolean")
         if entry.get("transport") not in EXTERNAL_TRANSPORTS:
             problems.append(f"{location}.transport: must be cli")
-        selection(entry, location)
+        _selection(entry, location, problems)
         tasks = entry.get("tasks")
-        if not fields(tasks, EXTERNAL_TASKS, f"{location}.tasks"):
+        if not _fields(tasks, EXTERNAL_TASKS, f"{location}.tasks", problems):
             continue
         for task, mode in tasks.items():
             if mode not in EXTERNAL_MODES:
@@ -128,6 +147,66 @@ def check_harness(config, coordinator):
             elif mode == "automatic" and (coordinator, client, task) != ("claude", "codex", "review"):
                 problems.append(f"{location}.{task}: automatic is only for Claude Code to Codex review")
     return problems
+
+
+def check_host_config(config):
+    """Validate a host worker configuration (t3.json / t3.local.json)."""
+    problems = []
+    if not _fields(config, ("version", "local"), "config", problems):
+        return problems
+    if type(config.get("version")) is not int or config["version"] != 2:
+        problems.append("version must be integer 2")
+    local = config.get("local", {})
+    if _fields(local, ("provider", "model", "effort", "profiles"), "local", problems):
+        _host_selection(local, "local", problems, required=False)
+        profiles = local.get("profiles", {})
+        if _fields(profiles, HOST_ROLES, "local.profiles", problems):
+            for role, entry in profiles.items():
+                location = f"local.profiles.{role}"
+                if not isinstance(entry, dict):
+                    problems.append(f"{location}: must be an object")
+                    continue
+                if role != "review" and any(key in entry for key in ("standard", "complex")):
+                    if not _fields(entry, ("standard", "complex"), location, problems):
+                        continue
+                    for name in ("standard", "complex"):
+                        if name not in entry:
+                            continue
+                        profile = entry[name]
+                        level = f"{location}.{name}"
+                        if _fields(profile, ("provider", "model", "effort"), level, problems):
+                            _host_selection(profile, level, problems, required=True)
+                elif _fields(entry, ("provider", "model", "effort"), location, problems):
+                    _host_selection(entry, location, problems, required=True)
+    return problems
+
+
+def check_harness_file(path, project):
+    """Problems (`harness-config: ...`) for a single host or coordinator harness file."""
+    project = Path(project).resolve()
+    path = Path(path)
+    errors = []
+
+    def fail(message):
+        errors.append(f"harness-config: {message}")
+
+    is_host = path.name in HOST_FILENAMES
+    is_coordinator = path.suffix == ".json" and path.stem in HARNESS_NAMES
+    if not (is_host or is_coordinator):
+        fail(f"invalid coordinator filename: {path.name}")
+        return errors
+    if not path.is_file() or not path.resolve().is_relative_to(project):
+        fail(f"invalid {'host' if is_host else 'coordinator'} file: {path.name}")
+        return errors
+    try:
+        config = load_json(path)
+    except (OSError, ValueError) as error:
+        fail(f"{path.name}: {error}")
+        return errors
+    problems = check_host_config(config) if is_host else check_harness(config, path.stem)
+    for problem in problems:
+        fail(f"{path.name}: {problem}")
+    return errors
 
 
 def check_project_harnesses(project):
@@ -146,19 +225,7 @@ def check_project_harnesses(project):
         fail("harness directory must stay inside the project")
     elif directory.is_dir():
         for path in sorted(directory.iterdir()):
-            if path.suffix != ".json" or path.stem not in HARNESS_NAMES:
-                fail(f"invalid coordinator filename: {path.name}")
-                continue
-            if not path.is_file() or not path.resolve().is_relative_to(project):
-                fail(f"invalid coordinator file: {path.name}")
-                continue
-            try:
-                config = load_json(path)
-            except (OSError, ValueError) as error:
-                fail(f"{path.name}: {error}")
-                continue
-            for problem in check_harness(config, path.stem):
-                fail(f"{path.name}: {problem}")
+            errors.extend(check_harness_file(path, project))
     return errors
 
 
@@ -524,9 +591,22 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--project", type=Path,
                         help="validate <PROJECT>/.agents/harnesses/*.json instead of the plugin")
+    parser.add_argument("--harness-file", type=Path,
+                        help="validate only one host or coordinator harness JSON file")
     parser.add_argument("--root", type=Path, default=PLUGIN_ROOT, help="plugin root (default: this plugin)")
     args = parser.parse_args(argv)
-    if args.project is not None:
+    if args.harness_file is not None:
+        if args.project is None:
+            print("Not validated: --harness-file requires --project", file=sys.stderr)
+            return 2
+        if not args.project.is_dir():
+            print(f"Not validated: {args.project} is not a directory", file=sys.stderr)
+            return 2
+        project = args.project.resolve()
+        target = args.harness_file if args.harness_file.is_absolute() else (project / args.harness_file)
+        errors = check_harness_file(target, project)
+        report = f"harness files checked: {target.name}"
+    elif args.project is not None:
         if not args.project.is_dir():
             print(f"Not validated: {args.project} is not a directory", file=sys.stderr)
             return 2

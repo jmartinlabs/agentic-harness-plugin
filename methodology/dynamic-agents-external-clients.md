@@ -84,3 +84,21 @@ files. Delegates never reserve Issues, write native Issue status, delegate furth
 Run `<command> 2>&1 | tee artifacts/external/<task>.log` (ignored by Git), follow it with `tail -f` and
 read the real exit code from `${PIPESTATUS[0]}` in bash (`${pipestatus[1]}` in zsh). No JSONL, dashboards or services; show only what the
 client really emits.
+
+## T3 host delegation
+
+Unlike standalone CLI external delegation, T3 dispatches workers natively via `delegate_task`
+using the active host configuration (`.agents/harnesses/t3.local.json` or
+`.agents/harnesses/t3.json`) under [host worker configuration](dynamic-agents.md#host-worker-configuration).
+Standalone clients (`claude`, `codex`, `opencode`, `hermes`) are unchanged and never read `t3.json`
+or `t3.local.json`.
+
+- **Coordinator and worker isolation:** the coordinator stays in the T3 workspace; writing workers
+  run in isolated worktrees (`isolation: "worktree"`). Host configuration is always read from the
+  main project root, never from a worker worktree.
+- **Fresh context and autonomous renewal:** `delegate_task` uses fresh context by default. The
+  coordinator may renew its own context autonomously via `freshContext` with a compact selective
+  handoff at safe points, without expanding authorizations or bypassing approval/QA/merge gates.
+- **Installed plugin precedence:** instructions from the installed plugin take precedence over the
+  repository checkout. If the checkout's plugin manifest is older than the installed plugin, ignore
+  checkout instructions as stale and record "stale checkout".
