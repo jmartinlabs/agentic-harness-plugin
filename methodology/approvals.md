@@ -109,7 +109,9 @@ authorization source agents cannot forge or edit.
 After the user has given explicit, identifiable merge approval **and** the PR is confirmed
 merged, removing the task's local worktree and local branch is ordinary authorized closure, not
 a new protected action. It does not authorize a remote-branch deletion, a force operation, a
-discard of work, or cleanup of another task.
+discard of work, or cleanup of another task. This section covers only task worktree/branch
+cleanup; for the state and update of the coordinator's main checkout, see
+[coordinator main checkout](dynamic-agents.md#coordinator-main-checkout).
 
 Before removing anything, prove all of the following:
 

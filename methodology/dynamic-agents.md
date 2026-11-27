@@ -55,6 +55,31 @@ cannot be supplied compactly. Evidence identifies the commit plus dirty or untra
 command, the environment and the result; after a delta repeat the affected checks, and run the full
 verification for uncertain impact, mandatory gates or financial/security risk.
 
+## Coordinator main checkout
+
+Keep the coordinator's main checkout on the project's configured base branch (which may differ
+from the repository's default branch—for example, a development branch such as `test` rather
+than `main`). Never switch that checkout to a task branch. Workers write only in isolated
+worktrees; their changes stay there and are never applied to the main checkout, which serves
+solely as a coordination surface.
+
+- **Session-start inspection:** At session start, inspect the current branch, `HEAD`,
+  staged/unstaged/untracked changes, the worktree list, and the relation to the configured base
+  branch's upstream. Report the observed state and preserve unexpected changes—never clean, reset,
+  check out, or attribute changes. If pending changes block authorized work, stop and ask.
+- **Host updates and manual fast-forward:** Host auto-pull is an optional capability (for
+  example, T3's "Automatically pull" setting when enabled), not an assumed configuration. When
+  that capability is active and has already updated the checkout, verify the resulting branch,
+  `HEAD`, and cleanliness and do not run a redundant manual pull. After an authorized, confirmed
+  merge, rely on the host update if it already advanced the checkout; only if it did not, and the
+  checkout is on the configured base branch, clean, and has no local commits or divergence,
+  fast-forward manually with `git pull --ff-only` (or `git merge --ff-only`). If a fast-forward
+  is not possible, preserve the state and report the blocker.
+- **No forced updates or discards:** Never force updates or discard files (`git reset --hard`,
+  `git clean -fd`, `git checkout -- .`, `git pull --force`, and equivalents are forbidden). Preserve
+  all pending changes. Post-merge cleanup of the task worktree and branch remains in
+  [post-merge local cleanup](approvals.md#post-merge-local-cleanup).
+
 ## Coordinator configuration
 
 At dispatch, only the coordinator consults its repository's
