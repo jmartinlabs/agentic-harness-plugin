@@ -1,6 +1,6 @@
 ---
 name: orchestrate
-description: Coordinate software work from initial planning through verified delivery using risk-based Quick Standard or Full workflows.
+description: Use before coordinating or delegating work: classify Quick, Standard or Full, dispatch bounded workers, and verify with independent QA and approval gates.
 ---
 
 # orchestrate
