@@ -2,7 +2,7 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/), see [RELEASING.md](RELEASING.md).
 
-## [Unreleased]
+## [2.1.0] - 2026-11-27
 
 ### Added
 - T3 host worker configuration schema (`t3.json` / `t3.local.json`), `--harness-file` single-file validation in `scripts/validate-core`, and initial `.agents/harnesses/t3.json` for this repository (#42, #45).
