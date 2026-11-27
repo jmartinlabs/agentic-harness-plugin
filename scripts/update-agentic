@@ -395,7 +395,7 @@ def _find_symlink_target(dirs: Sequence[Path], shared_repo: Path) -> Optional[Pa
                 continue
             try:
                 resolved = entry.resolve()
-            except OSError:
+            except (OSError, RuntimeError):
                 continue
             if shared_repo.exists() and _is_within(resolved, shared_repo):
                 return shared_repo
