@@ -2,6 +2,21 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/), see [RELEASING.md](RELEASING.md).
 
+## [2.0.0] - 2026-11-27
+
+Release candidate. Merge, tag and release need the owner's explicit approval.
+
+### Breaking
+- Retired `scripts/work-issue`, its tests, the `agentic-work-issue` shim, `epic-board`, `tracker.local` support, and the 12-state / receipt model (#39, #40, PR #41).
+
+### Changed
+- Adopted the native GitHub workflow: `planning-statuses` preflight, native issue types, sub-issues, `blocked_by` dependencies (satisfied only by `Done`), soft reservation, and PR-driven issue closure (#39, #40, PR #41).
+- Simplified `$work-issue` to a minimal surface and made `$handoff` adaptive/selective (#40, PR #41).
+- Added Hermes profile detection for profiles without plugin skills in `scripts/update-agentic` (#36, PR #37).
+
+### Adoption note (MAJOR)
+- Existing projects upgrading to `2.0.0` must stop using `work-issue` / GitHub Project boards for workflow state and switch to `Todo` / native GitHub issue statuses, types, sub-issues, and dependencies. No automatic migration is provided.
+
 ## [1.2.2] - 2026-11-26
 
 ### Added
