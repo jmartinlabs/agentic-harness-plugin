@@ -2,7 +2,7 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/), see [RELEASING.md](RELEASING.md).
 
-## [Unreleased]
+## [2.2.1] - 2026-11-27
 
 ### Changed
 - Claude Code `SessionStart` keeps the version banner but no longer injects the full `orchestrate` skill; Claude Code reads `AGENTS.md` directly, so the delegation preflight is loaded only when a session delegates or takes an Issue (#60).

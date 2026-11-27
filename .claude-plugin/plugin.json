@@ -1,6 +1,6 @@
 {
   "name": "agentic",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Agentic Harness plugin: shared skills, methodology, roles and tools for agent-driven projects.",
   "author": {
     "name": "jmartinlabs"
