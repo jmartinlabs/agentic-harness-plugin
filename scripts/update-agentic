@@ -415,6 +415,55 @@ def _update_symlink_harness(name: str, dirs: Sequence[Path], shared: SharedRepoM
     return HarnessResult(name, status, detail=f"custom symlink target: {target}")
 
 
+def _profile_has_shared_skill_symlink(skills_dir: Path, shared_skills: Path) -> bool:
+    if not shared_skills.is_dir():
+        return False
+    shared_skills_resolved = shared_skills.resolve()
+    if skills_dir.is_symlink():
+        try:
+            return skills_dir.resolve() == shared_skills_resolved
+        except (OSError, RuntimeError):
+            return False
+    for entry in sorted(skills_dir.iterdir()):
+        if not entry.is_symlink():
+            continue
+        try:
+            resolved = entry.resolve()
+        except (OSError, RuntimeError):
+            continue
+        if resolved != shared_skills_resolved and resolved.is_dir() and resolved.parent == shared_skills_resolved:
+            return True
+    return False
+
+
+def _find_hermes_profiles_without_plugin_skills(hermes_home: Path, shared_repo: Path) -> list[str]:
+    if not shared_repo.is_dir():
+        return []
+    profiles_dir = hermes_home / "profiles"
+    if not profiles_dir.is_dir():
+        return []
+    shared_skills = shared_repo / "skills"
+    missing: list[str] = []
+    for profile_dir in sorted(profiles_dir.iterdir()):
+        if not profile_dir.is_dir():
+            continue
+        skills_dir = profile_dir / "skills"
+        if not skills_dir.is_dir():
+            missing.append(f"{profile_dir.name} (missing skills/)")
+        elif not _profile_has_shared_skill_symlink(skills_dir, shared_skills):
+            missing.append(profile_dir.name)
+    return missing
+
+
+def update_hermes(hermes_home: Path, shared: SharedRepoManager) -> HarnessResult:
+    res = _update_symlink_harness("hermes", (hermes_home / "skills",), shared)
+    missing_profiles = _find_hermes_profiles_without_plugin_skills(hermes_home, shared.repo_path)
+    if missing_profiles:
+        warning = f"profiles without shared-checkout plugin skills: {', '.join(missing_profiles)}"
+        res.detail = f"{res.detail}; {warning}" if res.detail else warning
+    return res
+
+
 def update_antigravity(home: Path, runner: Runner, shared: SharedRepoManager, check_only: bool, timeout: int) -> HarnessResult:
     plugin_dir = home / ".gemini" / "config" / "plugins" / "agentic"
     if not (plugin_dir / ".antigravity-plugin" / "plugin.json").is_file():
@@ -460,7 +509,7 @@ def run_all(
         ("opencode", lambda: _update_symlink_harness(
             "opencode", (opencode_dir / "skills", opencode_dir / "agents", opencode_dir / "plugins"), shared
         )),
-        ("hermes", lambda: _update_symlink_harness("hermes", (hermes_home / "skills",), shared)),
+        ("hermes", lambda: update_hermes(hermes_home, shared)),
         ("antigravity", lambda: update_antigravity(eff_home, runner, shared, check_only, timeout)),
     )
     results: list[HarnessResult] = []

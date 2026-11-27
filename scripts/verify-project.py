@@ -15,7 +15,7 @@ PLUGIN_OWNED = (".agents/skills", ".agents/roles", ".claude/skills", ".claude/ag
 METHODOLOGY = "methodology"
 PROJECT_METHODOLOGY = "specs/methodology"
 TEMPLATES = "templates"
-SHIM_RULES = ("agentic-verify-project", "agentic-work-issue", "agentic-relay",
+SHIM_RULES = ("agentic-verify-project", "agentic-relay",
               "agentic-check-delegation-route", "agentic-usage-report", "agentic-usage-auto")
 
 

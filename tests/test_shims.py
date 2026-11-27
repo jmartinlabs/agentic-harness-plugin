@@ -7,9 +7,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
-SHIMS = ("agentic-work-issue", "agentic-relay", "agentic-check-delegation-route",
+SHIMS = ("agentic-relay", "agentic-check-delegation-route",
          "agentic-usage-report", "agentic-usage-auto", "agentic-verify-project")
-TOOLS = ("work-issue", "agent-relay", "check-delegation-route", "report-agent-usage", "auto-agent-usage",
+TOOLS = ("agent-relay", "check-delegation-route", "report-agent-usage", "auto-agent-usage",
          "verify-project.py")
 
 
@@ -19,12 +19,9 @@ class TempCase(unittest.TestCase):
         self.addCleanup(temp.cleanup)
         self.tmp = Path(temp.name).resolve()
 
-    def project(self, name, agents=None):
+    def project(self, name):
         path = self.tmp / name
         path.mkdir()
-        if agents:
-            (path / ".agents").mkdir()
-            (path / ".agents" / "tracker.local.yaml").write_text(f"agents: [{agents}]\n")
         return path
 
 

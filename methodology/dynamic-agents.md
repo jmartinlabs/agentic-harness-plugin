@@ -12,7 +12,7 @@ Reusable profiles: [Functional](../roles/functional.md), [Implementation](../rol
 [QA/Review](../roles/qa-review.md) and [Infrastructure/DevOps](../roles/infrastructure.md).
 They shape behavior; they do not register running agents or cap delegation. The coordinator may run
 several tasks with the same profile or write a narrow temporary role. It is the only scheduler and the
-only writer of the shared board; a delegate acts on its packet and nothing else.
+only one that transitions Issue status; a delegate acts on its packet and nothing else.
 
 ## Work packets
 

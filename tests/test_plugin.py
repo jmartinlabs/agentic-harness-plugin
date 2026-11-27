@@ -98,10 +98,7 @@ PATH_PATTERN = re.compile(
     r"|(?<![\w.])\.codex(?!\w)|(?<![\w.])\.opencode/|scripts/")
 ALLOWED_PATHS = {
     # The tools ship in scripts/ since this increment; the verbatim methodology text keeps the template path.
-    ("methodology/document-ownership.md", "scripts/"): 1,
-    ("methodology/issue-workflow.md", "scripts/"): 3,
     ("skills/relay/GITHUB_API.md", "scripts/"): 2,
-    ("skills/work-issue/SKILL.md", "scripts/"): 2,
     ("skills/relay/SKILL.md", "scripts/"): 1,
     # adopt-project runs the plugin's own scripts/verify-project.py to list plugin-owned copies in the project.
     ("skills/adopt-project/SKILL.md", "scripts/"): 2,

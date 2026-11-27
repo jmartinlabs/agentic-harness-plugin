@@ -61,7 +61,7 @@ done
 
 ### Hermes Agent
 
-Hermes loads skills natively at user scope. Clone `stable` once per user and symlink `skills/*` into `${HERMES_HOME:-$HOME/.hermes}/skills` (no files are copied into projects), and always start `hermes` from the project root. See [adapters/hermes/README.md](adapters/hermes/README.md) for full install, update, rollback and optional `model_map` role-routing instructions.
+Hermes loads skills natively at user scope. Clone `stable` once per user and symlink `skills/*` into `${HERMES_HOME:-$HOME/.hermes}/skills` (no files are copied into projects), and always start `hermes` from the project root. `scripts/update-agentic --check` also inspects `${HERMES_HOME:-$HOME/.hermes}/profiles/*/` in read-only mode (when the shared checkout exists) and warns about profiles whose `skills/` directory is missing or has no symlink to a top-level skill directory inside `<shared-repo>/skills` (if the profile's `skills/` directory itself is a symlink to `<shared-repo>/skills`, the profile is considered covered). A single valid symlink to a top-level skill directory marks a profile as covered: partial symlink sets are not flagged, and copied (non-symlinked) skills are reported as missing shared-checkout plugin skills; `update-agentic` never creates or repairs profile links. See [adapters/hermes/README.md](adapters/hermes/README.md) for full install, update, rollback and optional `model_map` role-routing instructions.
 
 ---
 
@@ -153,7 +153,7 @@ git -C ~/.local/share/agentic-harness-plugin checkout v1.2.0
 - `agents/` — Claude Code role agents (`functional`, `implementation`, `infrastructure`, `qa-review`).
 - `adapters/opencode/`, `adapters/hermes/` — global per-user adapters for OpenCode and Hermes.
 - `hooks/` — `SessionStart` version banner (`Agentic Harness X.Y.Z`) and Codex usage hooks.
-- `scripts/`, `bin/` — CLI tools (`verify-project.py`, `validate-core`, `work-issue`, `agent-relay`, `check-delegation-route`, `report-agent-usage`, `auto-agent-usage`). In Claude Code, `bin/agentic-*` shims are on `PATH` while enabled; elsewhere run `python3 <plugin-root>/scripts/<tool>`.
+- `scripts/`, `bin/` — CLI tools (`verify-project.py`, `validate-core`, `agent-relay`, `check-delegation-route`, `report-agent-usage`, `auto-agent-usage`). In Claude Code, `bin/agentic-*` shims are on `PATH` while enabled; elsewhere run `python3 <plugin-root>/scripts/<tool>`.
 
 ---
 

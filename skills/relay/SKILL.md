@@ -5,7 +5,7 @@ description: Exchange substantive messages between two agents through one Git br
 
 # relay
 
-The command-line tool ships with this plugin: run it from the PROJECT directory, by its `agentic-relay` shim in Claude Code (on PATH while the plugin is enabled) or by `python3 <plugin root>/scripts/agent-relay` elsewhere; the project's Git root is the working repository, so pass no repository flags (the tool has no `--repo`, `--owner` or `--project`); use `--remote` where needed; `.agents/tracker.local.yaml` only supplies the agents catalogue.
+The command-line tool ships with this plugin: run it from the PROJECT directory, by its `agentic-relay` shim in Claude Code (on PATH while the plugin is enabled) or by `python3 <plugin root>/scripts/agent-relay` elsewhere; the project's Git root is the working repository, so pass no repository flags (the tool has no `--repo`, `--owner` or `--project`); use `--remote` where needed.
 
 Optional, user-triggered transport for a two-participant conversation. It is not a work
 queue, a controller, an approval channel or a second source of truth. The canonical packet
