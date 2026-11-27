@@ -10,7 +10,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 - `work-issue` now requires `orchestrate` in context instead of only linking to it (#60).
 
 ### Notes
-- Projects adopted before this change keep their existing `AGENTS.md`; add the preflight wording once manually. Adoption never rewrites existing entry files.
+- Projects created or adopted before this change keep their existing `AGENTS.md`; add this section once, manually. Adoption never rewrites existing entry files.
+
+  ```markdown
+  ## Coordinator only
+  Before the first delegation of any kind (subagent, delegate task, worker) or before
+  taking an Issue (`work-issue`), ensure the full `orchestrate` skill text is in the
+  current context; load it only if missing, and apply `orchestrate` step 4 before each
+  dispatch.
+  ```
+
+  Keep `CLAUDE.md` referencing the file with `@AGENTS.md`.
 
 ## [2.2.0] - 2026-11-27
 
