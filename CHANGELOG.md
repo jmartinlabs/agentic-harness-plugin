@@ -7,7 +7,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 Release candidate. Merge, tag and release need the owner's explicit approval.
 
 ### Breaking
-- Retired `scripts/work-issue`, its tests, the `agentic-work-issue` shim, `epic-board`, `tracker.local` support, and the 12-state / receipt model (#39, #40, PR #41).
+- Retired the `scripts/work-issue` script (and its tests), the `agentic-work-issue` shim, `epic-board`, `tracker.local` support, and the 12-state / receipt model. The `$work-issue` skill is **preserved** with a minimal surface (#39, #40, PR #41).
 
 ### Changed
 - Adopted the native GitHub workflow: `planning-statuses` preflight, native issue types, sub-issues, `blocked_by` dependencies (satisfied only by `Done`), soft reservation, and PR-driven issue closure (#39, #40, PR #41).
