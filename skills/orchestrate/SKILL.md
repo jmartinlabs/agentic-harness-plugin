@@ -1,6 +1,6 @@
 ---
 name: orchestrate
-description: Use before coordinating or delegating work: classify Quick, Standard or Full, dispatch bounded workers, and verify with independent QA and approval gates.
+description: "Use before coordinating or delegating software work. Classify Quick, Standard or Full, dispatch bounded workers, and verify with independent QA and approval gates."
 ---
 
 # orchestrate
