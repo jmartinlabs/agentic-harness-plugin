@@ -10,9 +10,10 @@ do not restate the methodology.
    - T3 host: `.agents/harnesses/t3.local.json` if present, otherwise `.agents/harnesses/t3.json`.
    - Standalone: `.agents/harnesses/<coordinator>.json`.
 3. Validate it (`scripts/validate-core --project <project> --harness-file <file>`) and
-   apply `orchestrate` step 4 before each dispatch: dispatch the exact provider and model
-   the file selects and never substitute; where the policy permits, an absent value keeps
-   native inheritance.
+   apply `orchestrate` step 4 before each dispatch. In T3, dispatch the exact provider and
+   model the file selects and never substitute. In standalone, a configured profile or
+   default is a request: if the client cannot apply or confirm it, fall back to native
+   inheritance and report it unapplied or unverified.
 
 Missing means attempted and absent: native delegation then keeps its existing rules.
 An unreadable or invalid file, or a T3 role with no profile and no same-file default
