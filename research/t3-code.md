@@ -605,4 +605,16 @@ Duración registrada:
 
 **Decisión:**
 
-- Evaluación práctica inicial de T3 finalizada satisfactoriamente; sin release ni cambios de integración con T3; diseño definitivo en una sesión nueva.
+- Evaluación práctica inicial de T3 finalizada satisfactoriamente; sin release ni cambios de integración con T3; validación de eficiencia del harness simplificado primero en sesión nueva y después diseño definitivo en [#42](https://github.com/jmartinlabs/agentic-harness-plugin/issues/42) (§15).
+
+## 15. Decisiones P0 y estado del backlog (2026-11-27)
+
+- **Prioridad P0**: la eficiencia del harness ([#39](https://github.com/jmartinlabs/agentic-harness-plugin/issues/39)) prevalece sobre la integración con T3. El workflow nativo quedó fusionado en [PR #41](https://github.com/jmartinlabs/agentic-harness-plugin/pull/41) (`d7dbc63`): estados, tipos, sub-issues y dependencias nativas; retirada de `work-issue`, Project y recibos; y *handoff* selectivo.
+- **Integración T3 diferida**: queda pospuesta hasta validar la eficiencia del harness simplificado en sesión nueva. La issue única [#42](https://github.com/jmartinlabs/agentic-harness-plugin/issues/42) absorbe #23 y #25 con `.agents/harnesses/t3.json` propio y Agentic Harness como primer consumidor, sin excepciones ni modelos globales; sin implementación por ahora.
+- **GLM 5.3 como QA**: evaluación trasladada a [#39](https://github.com/jmartinlabs/agentic-harness-plugin/issues/39).
+- **Estado del backlog**:
+  - **Absorbidas en [#42](https://github.com/jmartinlabs/agentic-harness-plugin/issues/42)**: #23 y #25.
+  - **`Not planned`**: #18, #24, #26 y #27.
+  - **`Done`**: #19–#21.
+  - **Se cierran al integrar esta PR**: #34 y #17.
+  - **Candidato**: #38.
