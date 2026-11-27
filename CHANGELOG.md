@@ -5,7 +5,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 ## [Unreleased]
 
 ### Changed
-- Claude Code `SessionStart` keeps the version banner but no longer injects the full `orchestrate` skill; this repository ships `CLAUDE.md` referencing `AGENTS.md`, so the delegation preflight is loaded only when a session delegates or takes an Issue (#60).
+- Claude Code `SessionStart` keeps the version banner but no longer injects the full `orchestrate` skill; Claude Code reads `AGENTS.md` directly, so the delegation preflight is loaded only when a session delegates or takes an Issue (#60).
 - Delegation preflight wording unified across the plugin, the project template and `adopt-project`: ensure the full `orchestrate` text is in the current context, loading it only if missing, and apply the active configuration before each dispatch (#60).
 - `work-issue` now requires `orchestrate` in context instead of only linking to it (#60).
 
@@ -20,7 +20,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   dispatch.
   ```
 
-  Keep `CLAUDE.md` referencing the file with `@AGENTS.md`.
+  Where the project already has a `CLAUDE.md`, keep it referencing the file with `@AGENTS.md`.
 
 ## [2.2.0] - 2026-11-27
 
