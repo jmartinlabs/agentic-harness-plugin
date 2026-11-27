@@ -166,8 +166,12 @@ never from a worker's worktree.
   dispatch and compare with observed execution metadata afterwards (distinct identity = `FAIL`,
   missing metadata or unexposed effort = `UNVERIFIED`; worker self-report is not evidence).
 - **Autonomous context renewal:** the coordinator may renew its own context autonomously with
-  `freshContext` and a compact selective handoff at safe points while respecting all
-  authorizations and approval gates; workers keep their own session while useful.
+  `freshContext` and a compact selective handoff at safe points, keeping all authorizations,
+  approval gates, and evidence links; workers keep their own session while useful. After a
+  significant milestone (confirmed merge, release, closed QA/review, or phase change), proactively
+  evaluate renewal before starting the next work block when it adds value. While T3 does not expose
+  `contextUsage`, treat ~150k as an indicative warning and ~200k as a soft target—never a hard
+  cutoff, mid-gate, during irreversible ops, or when handoff cost outweighs gain.
 
 ## Models and background work
 
