@@ -5,7 +5,14 @@ do not restate the methodology.
 
 ## Coordinator only
 
-1. Load the `orchestrate` skill.
+Workers executing a packet ignore this section: they never read coordinator
+configuration, delegate or approve.
+
+Before the first delegation of any kind (subagent, delegate task, worker) or before
+taking an Issue (`work-issue`), you are the coordinator for the rest of the session.
+Without asking for confirmation:
+
+1. Load the `orchestrate` skill if it is not already in context.
 2. Read the active coordinator configuration from the main project root, never a worktree:
    - T3 host: `.agents/harnesses/t3.local.json` if present, otherwise `.agents/harnesses/t3.json`.
    - Standalone: `.agents/harnesses/<coordinator>.json`.
@@ -19,5 +26,4 @@ Missing means attempted and absent: native delegation then keeps its existing ru
 An unreadable or invalid file, or a T3 role with no profile and no same-file default
 (absent an authorized explicit selection), stops dispatch.
 
-Workers executing a packet ignore this section: they never read coordinator
-configuration, delegate or approve.
+Conversations that do not delegate or take Issues need none of this.
