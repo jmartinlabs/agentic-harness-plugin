@@ -12,7 +12,7 @@ Before the first delegation of any kind (subagent, delegate task, worker) or bef
 taking an Issue (`work-issue`), you are the coordinator for the rest of the session.
 Without asking for confirmation:
 
-1. Load the `orchestrate` skill if it is not already in context.
+1. Ensure the full `orchestrate` skill text is in the current context; load it only if it is missing.
 2. Read the active coordinator configuration from the main project root, never a worktree:
    - T3 host: `.agents/harnesses/t3.local.json` if present, otherwise `.agents/harnesses/t3.json`.
    - Standalone: `.agents/harnesses/<coordinator>.json`.

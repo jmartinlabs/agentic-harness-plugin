@@ -5,7 +5,7 @@ description: Take authorized work from GitHub Issues using native planning-statu
 
 # work-issue
 
-On-demand procedure for taking authorized Issues via native GitHub workflow (`gh` / REST). Single coordinator per repository; delegates never reserve or transition Issues. Read `AGENTS.md` and `specs/project-rules.md` (when present) before acting on any gate. Load [orchestrate](../orchestrate/SKILL.md) and follow it together with [issue-workflow](../../methodology/issue-workflow.md).
+On-demand procedure for taking authorized Issues via native GitHub workflow (`gh` / REST). Single coordinator per repository; delegates never reserve or transition Issues. Read `AGENTS.md` and `specs/project-rules.md` (when present) before acting on any gate. Ensure [orchestrate](../orchestrate/SKILL.md) is in the current context (load it if missing) and follow it together with [issue-workflow](../../methodology/issue-workflow.md).
 
 ## Queue, reservation & concurrency
 
